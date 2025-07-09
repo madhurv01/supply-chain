@@ -1,0 +1,10 @@
+streamlit
+pyautogen
+python-dotenv
+pandas
+qrcode[pil]
+geopy
+seaborn
+matplotlib
+streamlit-folium
+folium
