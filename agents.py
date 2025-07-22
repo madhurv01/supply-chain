@@ -21,7 +21,8 @@ except FileNotFoundError:
 # This configuration uses the Groq cloud API.
 config_list = [{
     "model": "llama3-8b-8192",  # Fast and efficient model
-    "api_key": os.getenv("GROQ_API_KEY"), # The key will be read from Streamlit's secrets
+    "api_key": st.secrets.get("GROQ_API_KEY"), # Use .get() for safety
+    "base_url": "https://api.groq.com/openai/v1" # Groq's API endpoint
 }]
 
 
