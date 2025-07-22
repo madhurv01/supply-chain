@@ -9,3 +9,5 @@ seaborn
 matplotlib
 streamlit-folium
 folium
+supabase
+streamlit-authenticator
