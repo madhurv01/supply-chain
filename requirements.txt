@@ -1,5 +1,6 @@
 streamlit
 pyautogen
+autogen[retrieve]
 python-dotenv
 pandas
 qrcode[pil]
