@@ -12,10 +12,11 @@ An agentic farm-to-market supply chain platform: track crop plots, harvest into 
 
 ### Backend
 
+Run from the repo root (not from inside `backend\`) — `backend.main:app` is a module path relative to the root:
+
 ```
-cd backend
-venv\Scripts\activate
-pip install -r requirements.txt   # if not already installed
+backend\venv\Scripts\activate
+pip install -r backend\requirements.txt   # if not already installed
 uvicorn backend.main:app --reload --port 8000
 ```
 
