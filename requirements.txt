@@ -1,13 +1,10 @@
 streamlit
-pyautogen
-autogen[retrieve]
+pyautogen==0.2.35
+numpy>=2.0
 python-dotenv
 pandas
 qrcode[pil]
-geopy
 seaborn
 matplotlib
 streamlit-folium
 folium
-supabase
-streamlit-authenticator

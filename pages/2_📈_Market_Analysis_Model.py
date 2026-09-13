@@ -56,7 +56,7 @@ with col1:
                         f"- **Expected Average Price:** ₹{best_market['Modal_Price']:.2f}"
                     )
                     
-                    save_result(query_for_db, report_for_db)
+                    save_result("shared", query_for_db, report_for_db)
                     st.toast("✅ Analysis saved to history!")
                     st.rerun()
 
@@ -90,7 +90,7 @@ with col1:
                         f"- **Expected Average Price:** ₹{best_commodity['Modal_Price']:.2f}"
                     )
                     
-                    save_result(query_for_db, report_for_db)
+                    save_result("shared", query_for_db, report_for_db)
                     st.toast("✅ Analysis saved to history!")
                     st.rerun()
 
@@ -125,6 +125,6 @@ if not past_results:
 else:
     for res in past_results:
         query_details = json.loads(res[2])
-        title_str = f"**{query_details.get('analysis_type', 'Analysis')}** for **'{query_details.get('query_value', 'N/A')}'** (on {res[1].split(' ')[0]})"
+        title_str = f"**{query_details.get('analysis_type', 'Analysis')}** for **'{query_details.get('query_value', 'N/A')}'** (on {res[1].split('T')[0]})"
         with st.expander(title_str):
             st.markdown(res[3], unsafe_allow_html=True)

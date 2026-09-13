@@ -1,9 +1,7 @@
 import os
 import pandas as pd
 from dotenv import load_dotenv
-import autogen
 from autogen import ConversableAgent, UserProxyAgent
-import streamlit as st
 
 # --- Configuration and Data Loading ---
 load_dotenv()
@@ -15,14 +13,14 @@ try:
     df.dropna(subset=['Modal_Price', 'Commodity', 'Market'], inplace=True)
 except FileNotFoundError:
     print("Error: agriculture.csv not found. Please place it in the project directory.")
-    exit()
+    df = pd.DataFrame(columns=['Commodity', 'State', 'Market', 'Modal_Price'])
 
-# --- THE ONLY CHANGE: SWITCHING TO GROQ FOR CLOUD DEPLOYMENT ---
-# This configuration uses the Groq cloud API.
+# Uses the Groq cloud API (free tier). Set GROQ_API_KEY in your .env file.
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 config_list = [{
-    "model": "llama3-8b-8192",  # Fast and efficient model
-    "api_key": st.secrets.get("GROQ_API_KEY"), # Use .get() for safety
-    "base_url": "https://api.groq.com/openai/v1" # Groq's API endpoint
+    "model": "llama3-8b-8192",
+    "api_key": GROQ_API_KEY,
+    "base_url": "https://api.groq.com/openai/v1",
 }]
 
 
@@ -52,6 +50,17 @@ def calculate_predictive_metrics(commodity: str, state: str = "All", market: str
     )
 
 def run_prediction_workflow(user_query_details, st_container):
+    if not GROQ_API_KEY:
+        return (
+            "### Price Forecast\nAI forecasting is unavailable because GROQ_API_KEY is not set.\n\n"
+            "### Market-Risk Forecast\nAdd a free Groq API key to your `.env` file to enable AI forecasts.\n\n"
+            "### Strategic Opportunity Forecast\n"
+            "1. Get a free key at console.groq.com\n"
+            "2. Add `GROQ_API_KEY=...` to `.env`\n"
+            "3. Restart the app\n"
+            "4. Meanwhile, use the Market Analysis page for non-AI insights\n"
+            "5. Re-run this forecast once configured"
+        )
     llm_config = {"config_list": config_list}
     forecasting_agent = ConversableAgent(
         name="Forecasting_Agent",
