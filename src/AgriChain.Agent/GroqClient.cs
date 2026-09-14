@@ -7,7 +7,7 @@ namespace AgriChain.Agent;
 
 public class GroqClient(HttpClient httpClient, string apiKey)
 {
-    private const string ChatModel = "openai/gpt-oss-120b";
+    private const string ChatModel = "qwen/qwen3.8-27b";
     private const string VisionModel = "qwen/qwen3.8-27b";
     private const string Endpoint = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -18,9 +18,10 @@ public class GroqClient(HttpClient httpClient, string apiKey)
         var body = new JsonObject
         {
             ["model"] = ChatModel,
-            ["messages"] = messages,
-            ["tools"] = tools,
+            ["messages"] = JsonNode.Parse(messages.ToJsonString()),
+            ["tools"] = JsonNode.Parse(tools.ToJsonString()),
             ["tool_choice"] = "auto",
+            ["max_tokens"] = 700,
         };
         return await SendAsync(body, ct);
     }
@@ -43,6 +44,7 @@ public class GroqClient(HttpClient httpClient, string apiKey)
             {
                 new JsonObject { ["role"] = "user", ["content"] = content },
             },
+            ["max_tokens"] = 500,
         };
         var response = await SendAsync(body, ct);
         return response["choices"]?[0]?["message"]?["content"]?.GetValue<string>() ?? string.Empty;
