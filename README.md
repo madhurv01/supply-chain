@@ -10,6 +10,10 @@ An agentic farm-to-market supply chain platform. Track crop plots from planting 
 
 Built as a C# backend and an Angular frontend, with Supabase used strictly as the Postgres database (auth is handled in-house by ASP.NET Core Identity, not Supabase Auth).
 
+## Contents
+
+[Features](#features) · [Architecture](#architecture) · [Tech stack](#tech-stack) · [Project structure](#project-structure) · [Frontend pages](#frontend-pages) · [Requirements](#requirements) · [Setup](#setup-first-time-only) · [Running the app](#running-the-app) · [Environment variables](#environment-variables) · [Database schema](#database-schema) · [API reference](#api-reference) · [The AI agent](#the-ai-agent) · [Seed data](#seed-data) · [Demo login](#demo-login) · [Troubleshooting](#troubleshooting) · [Known limitations](#known-limitations)
+
 ## Features
 
 - **AI Agent** — conversational agent (Groq, tool-calling) covering forecasting, farm/inventory, logistics, finance, route optimization, and crop grading, chaining multiple actions from one instruction
@@ -32,9 +36,8 @@ Angular (4200) ──REST + Bearer JWT──▶ ASP.NET Core (5000) ──EF Cor
                                              └── MCP server (/mcp)
 ```
 
-- Auth is entirely in-house: ASP.NET Core Identity issues and validates its own JWTs. Supabase is used only as a Postgres database (via a direct connection string through its connection pooler), not for auth.
-- The AI agent, the route optimizer, crop grading, and the manual dashboard pages all share the same `AgriChain.Infrastructure/Services` layer, so agent actions stay consistent with the UI.
-- The same tool set the in-app agent uses is also exposed as an MCP server, so external MCP clients can drive the app.
+- Auth is entirely in-house (ASP.NET Core Identity issues/validates its own JWTs) — Supabase is only a Postgres database, accessed via its connection pooler, not used for auth.
+- The AI agent, route optimizer, crop grading, and manual dashboard pages all share the same `AgriChain.Infrastructure/Services` layer (agent actions stay consistent with the UI), and that same tool set is also exposed as an MCP server for external clients.
 
 ## Tech stack
 
@@ -61,6 +64,21 @@ supply-chain/
 └── README.md
 ```
 
+## Frontend pages
+
+| Route | Page |
+|---|---|
+| `/login` | Sign in / sign up |
+| `/dashboard` | KPIs, revenue trend, inventory value, live shipment mini-map, harvest readiness, price volatility, route-optimizer insight |
+| `/agent` | AI agent chat workspace, with a visible tool-call trail |
+| `/forecast` | AI 3-part price forecast |
+| `/market` | Non-AI market analysis (best market / best commodity) |
+| `/farm` | Plantings, harvest-into-inventory |
+| `/inventory` | Warehouse stock table |
+| `/logistics` | Route optimizer, dispatch form, per-shipment expandable tracking cards |
+| `/finance` | UPI QR generation, sale logging, revenue dashboard |
+| `/grading` | Crop photo upload → AI grade/defects/confidence |
+
 ## Requirements
 
 | Tool | Version | Notes |
@@ -71,7 +89,7 @@ supply-chain/
 | A Supabase project | — | Postgres only, accessed via the connection pooler (see [Environment variables](#environment-variables)) |
 | A [Groq](https://console.groq.com/) API key | free tier works | powers `/agent/chat` and `/grading/analyze`; optional — the app runs without it, those two features just report "not configured" |
 
-Everything else (EF Core, Angular Material, Leaflet, Chart.js, etc.) is a project dependency restored automatically by `dotnet build` / `npm install` — nothing else to install globally, except the optional `dotnet-ef` CLI tool (only needed if you're changing the database schema, see below).
+Everything else is a project dependency restored automatically by `dotnet build` / `npm install`.
 
 ## Setup (first time only)
 
@@ -79,8 +97,7 @@ Everything else (EF Core, Angular Material, Leaflet, Chart.js, etc.) is a projec
 # Backend — restore packages, wire up secrets
 cd src
 copy AgriChain.Api\appsettings.Development.json.example AgriChain.Api\appsettings.Development.json
-# then edit that file: fill in the real Supabase DB password and your GROQ_API_KEY
-# (see Environment variables below for the exact connection-string format)
+# then edit that file: fill in the real Supabase DB password and GROQ_API_KEY (see below)
 dotnet restore
 dotnet build
 
@@ -89,27 +106,22 @@ cd ..\frontend-ng
 npm install
 ```
 
-If you ever need to change the database schema, install the EF Core CLI once (`dotnet tool install --global dotnet-ef`) and run migrations from `src/`:
-```powershell
-dotnet-ef database update --project AgriChain.Infrastructure --startup-project AgriChain.Api
-```
+To change the database schema later: `dotnet tool install --global dotnet-ef`, then `dotnet-ef database update --project AgriChain.Infrastructure --startup-project AgriChain.Api` from `src/`.
 
 ## Running the app
 
 Two terminals, every time you want to run the app. **Run the backend command from the repo root** (`supply-chain\`), not from inside `src\AgriChain.Api\` — `dotnet run --project` resolves the path itself.
 
 ```powershell
-# Terminal 1 — backend (repo root)
+# Terminal 1 — backend (repo root) — wait for "Now listening on: http://localhost:5000"
 dotnet run --project src\AgriChain.Api
 ```
-Wait for `Now listening on: http://localhost:5000`.
 
 ```powershell
-# Terminal 2 — frontend
+# Terminal 2 — frontend — wait for "Local: http://localhost:4200/"
 cd frontend-ng
 npx ng serve
 ```
-Wait for `Application bundle generation complete` / the `Local: http://localhost:4200/` line.
 
 Then open **http://localhost:4200** and sign up, or use the [demo login](#demo-login).
 
@@ -138,7 +150,7 @@ All in `src/AgriChain.Api/appsettings.Development.json` (gitignored — copy fro
 | `crop_gradings` | vision-model grading results per photo |
 | `AspNetUsers` + Identity tables | in-house auth (replaces Supabase Auth) |
 
-Shipment destinations are MD5-hashed into stable India coordinates (no live GPS feed). EF Core migrations are hand-reviewed brownfield migrations — the initial one only creates the new tables (Identity, `crop_gradings`) and repairs `forecasts.user_id`'s foreign key; it does not touch the pre-existing 5 tables' data.
+Shipment destinations are MD5-hashed into stable India coordinates (no live GPS feed). Migrations are hand-reviewed brownfield migrations that only add new tables and repair `forecasts.user_id`'s FK — the pre-existing 5 tables' data is untouched.
 
 ## API reference
 
