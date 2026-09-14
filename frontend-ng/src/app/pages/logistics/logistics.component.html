@@ -9,9 +9,167 @@
     </mat-slide-toggle>
   </div>
 
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="card p-4 panel-emerald">
+      <p class="panel-heading text-xs font-medium text-slate-500 uppercase tracking-wide">Fleet Status</p>
+      <div class="flex items-end gap-4 mt-2">
+        <div>
+          <p class="text-2xl font-semibold text-slate-900">{{ fleetBreakdown().inTransit }}</p>
+          <p class="text-xs text-slate-500">In transit</p>
+        </div>
+        <div>
+          <p class="text-2xl font-semibold text-slate-900">{{ fleetBreakdown().arrived }}</p>
+          <p class="text-xs text-slate-500">Arrived</p>
+        </div>
+        <div>
+          <p class="text-2xl font-semibold text-slate-900">{{ fleetBreakdown().sold }}</p>
+          <p class="text-xs text-slate-500">Completed</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card p-4 panel-teal">
+      <p class="panel-heading text-xs font-medium text-slate-500 uppercase tracking-wide">Fleet Health</p>
+      <p class="text-2xl font-semibold text-slate-900 mt-2">{{ activeAvgProgress() | percent:'1.0-0' }}</p>
+      <p class="text-xs text-slate-500">Avg. progress across active shipments</p>
+      @if (atRiskShipments().length > 0) {
+        <p class="text-xs text-amber-600 mt-1">{{ atRiskShipments().length }} running behind (&gt;48h, &lt;40% progress)</p>
+      } @else {
+        <p class="text-xs text-emerald-600 mt-1">No shipments flagged as behind schedule</p>
+      }
+    </div>
+
+    <div class="card p-4 panel-amber">
+      <p class="panel-heading text-xs font-medium text-slate-500 uppercase tracking-wide">Top Destination Markets</p>
+      <div class="flex flex-col gap-1.5 mt-2">
+        @for (d of topDestinations(); track d.market) {
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-600 w-20 truncate">{{ d.market }}</span>
+            <div class="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+              <div class="h-full bg-amber-500" [style.width.%]="(d.quantity / maxDestinationQuantity()) * 100"></div>
+            </div>
+            <span class="text-xs text-slate-500 w-14 text-right">{{ d.quantity | number:'1.0-0' }}</span>
+          </div>
+        }
+        @if (topDestinations().length === 0) {
+          <p class="text-xs text-slate-500">No shipment data yet.</p>
+        }
+      </div>
+    </div>
+
+    <div class="card p-4 panel-violet">
+      <p class="panel-heading text-xs font-medium text-slate-500 uppercase tracking-wide">Commodities In Transit</p>
+      <div class="h-24 mt-2">
+        @if (commodityChartData().labels && commodityChartData().labels!.length > 0) {
+          <canvas baseChart [data]="commodityChartData()" [options]="doughnutOptions" type="doughnut"></canvas>
+        } @else {
+          <p class="text-xs text-slate-500 mt-4">No active shipments.</p>
+        }
+      </div>
+    </div>
+  </div>
+
   <div class="card p-2">
     <div id="logistics-map" class="w-full h-[32rem] rounded-lg overflow-hidden"></div>
   </div>
+
+  <mat-accordion multi class="flex flex-col gap-3">
+    <mat-expansion-panel [expanded]="activePanelOpen()" (opened)="toggleActivePanel(true)" (closed)="toggleActivePanel(false)">
+      <mat-expansion-panel-header>
+        <mat-panel-title class="!items-center">Active Shipments</mat-panel-title>
+        <mat-panel-description>
+          {{ activeShipments().length }} in transit · {{ activeQuantity() | number:'1.0-0' }} kg · avg {{ activeAvgProgress() | percent:'1.0-0' }} progress
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+
+      @if (activeShipments().length === 0) {
+        <p class="text-sm text-slate-500 p-4">No active shipments.</p>
+      }
+      @if (activeShipments().length > 0) {
+        <table mat-table [dataSource]="activeShipments()" class="w-full !bg-transparent">
+          <ng-container matColumnDef="truckId">
+            <th mat-header-cell *matHeaderCellDef>Truck</th>
+            <td mat-cell *matCellDef="let row">{{ row.truckId }}</td>
+          </ng-container>
+          <ng-container matColumnDef="commodity">
+            <th mat-header-cell *matHeaderCellDef>Commodity</th>
+            <td mat-cell *matCellDef="let row">{{ row.commodity }}</td>
+          </ng-container>
+          <ng-container matColumnDef="quantity">
+            <th mat-header-cell *matHeaderCellDef>Qty</th>
+            <td mat-cell *matCellDef="let row">{{ row.quantity | number:'1.0-2' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="destinationMarket">
+            <th mat-header-cell *matHeaderCellDef>Destination</th>
+            <td mat-cell *matCellDef="let row">{{ row.destinationMarket }}</td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let row">{{ row.status }}</td>
+          </ng-container>
+          <ng-container matColumnDef="progress">
+            <th mat-header-cell *matHeaderCellDef>Progress</th>
+            <td mat-cell *matCellDef="let row">{{ row.progress | percent:'1.0-0' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let row">
+              <button mat-button color="primary" (click)="deliver(row)">Mark Delivered</button>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns"></tr>
+        </table>
+      }
+    </mat-expansion-panel>
+
+    <mat-expansion-panel [expanded]="completedPanelOpen()" (opened)="toggleCompletedPanel(true)" (closed)="toggleCompletedPanel(false)">
+      <mat-expansion-panel-header>
+        <mat-panel-title class="!items-center">Completed Shipments</mat-panel-title>
+        <mat-panel-description>
+          {{ completedShipments().length }} delivered · {{ completedQuantity() | number:'1.0-0' }} kg · avg {{ completedAvgAge() | number:'1.0-1' }} h since dispatch
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+
+      @if (completedShipments().length === 0) {
+        <p class="text-sm text-slate-500 p-4">No completed shipments yet.</p>
+      }
+      @if (completedShipments().length > 0) {
+        <table mat-table [dataSource]="completedShipments()" class="w-full !bg-transparent">
+          <ng-container matColumnDef="truckId">
+            <th mat-header-cell *matHeaderCellDef>Truck</th>
+            <td mat-cell *matCellDef="let row">{{ row.truckId }}</td>
+          </ng-container>
+          <ng-container matColumnDef="commodity">
+            <th mat-header-cell *matHeaderCellDef>Commodity</th>
+            <td mat-cell *matCellDef="let row">{{ row.commodity }}</td>
+          </ng-container>
+          <ng-container matColumnDef="quantity">
+            <th mat-header-cell *matHeaderCellDef>Qty</th>
+            <td mat-cell *matCellDef="let row">{{ row.quantity | number:'1.0-2' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="destinationMarket">
+            <th mat-header-cell *matHeaderCellDef>Destination</th>
+            <td mat-cell *matCellDef="let row">{{ row.destinationMarket }}</td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let row">{{ row.status }}</td>
+          </ng-container>
+          <ng-container matColumnDef="progress">
+            <th mat-header-cell *matHeaderCellDef>Progress</th>
+            <td mat-cell *matCellDef="let row">{{ row.progress | percent:'1.0-0' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let row"></td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns"></tr>
+        </table>
+      }
+    </mat-expansion-panel>
+  </mat-accordion>
 
   <div class="card p-4">
     <p class="text-sm font-medium text-slate-700 mb-3">Route Optimizer</p>
@@ -84,48 +242,4 @@
     </form>
   </div>
 
-  <div class="card p-2 overflow-x-auto">
-    <p class="text-sm font-medium text-slate-700 px-2 pt-2">Active Shipments</p>
-    @if (shipments().length === 0) {
-      <p class="text-sm text-slate-500 p-4">No shipments yet.</p>
-    }
-    @if (shipments().length > 0) {
-      <table mat-table [dataSource]="shipments()" class="w-full !bg-transparent">
-        <ng-container matColumnDef="truckId">
-          <th mat-header-cell *matHeaderCellDef>Truck</th>
-          <td mat-cell *matCellDef="let row">{{ row.truckId }}</td>
-        </ng-container>
-        <ng-container matColumnDef="commodity">
-          <th mat-header-cell *matHeaderCellDef>Commodity</th>
-          <td mat-cell *matCellDef="let row">{{ row.commodity }}</td>
-        </ng-container>
-        <ng-container matColumnDef="quantity">
-          <th mat-header-cell *matHeaderCellDef>Qty</th>
-          <td mat-cell *matCellDef="let row">{{ row.quantity | number:'1.0-2' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="destinationMarket">
-          <th mat-header-cell *matHeaderCellDef>Destination</th>
-          <td mat-cell *matCellDef="let row">{{ row.destinationMarket }}</td>
-        </ng-container>
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Status</th>
-          <td mat-cell *matCellDef="let row">{{ row.status }}</td>
-        </ng-container>
-        <ng-container matColumnDef="progress">
-          <th mat-header-cell *matHeaderCellDef>Progress</th>
-          <td mat-cell *matCellDef="let row">{{ row.progress | percent:'1.0-0' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let row">
-            @if (row.status !== 'DELIVERED') {
-              <button mat-button color="primary" (click)="deliver(row)">Mark Delivered</button>
-            }
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="columns"></tr>
-        <tr mat-row *matRowDef="let row; columns: columns"></tr>
-      </table>
-    }
-  </div>
 </div>

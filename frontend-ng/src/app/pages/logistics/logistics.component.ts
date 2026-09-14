@@ -1,4 +1,4 @@
-import { Component, AfterViewInit, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, AfterViewInit, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,7 +6,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTableModule } from '@angular/material/table';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { BaseChartDirective } from 'ng2-charts';
+import { ChartConfiguration, ChartData } from 'chart.js';
 import * as L from 'leaflet';
 import 'leaflet.markercluster';
 import { ApiService } from '../../core/services/api.service';
@@ -18,9 +21,19 @@ interface TrackedShipment {
   currentLatLng: L.LatLng;
   animFrame?: number;
   shipment: Shipment;
+  section: 'active' | 'completed';
+}
+
+interface DestMarker {
+  marker: L.Marker;
+  section: 'active' | 'completed';
 }
 
 const ANIMATION_MS = 1500;
+const INDIA_BOUNDS: L.LatLngBoundsExpression = [
+  [4, 60],
+  [40, 100],
+];
 
 function bearing(from: L.LatLng, to: L.LatLng): number {
   const lat1 = (from.lat * Math.PI) / 180;
@@ -44,16 +57,110 @@ function truckIconHtml(rotationDeg: number, live: boolean): string {
   `;
 }
 
+function shipmentSection(status: string): 'active' | 'completed' {
+  // /logistics/shipments only ever returns IN_TRANSIT/ARRIVED (SOLD shipments
+  // are excluded server-side once sold), so ARRIVED is the real "completed the
+  // journey, awaiting sale" state here, not SOLD.
+  return status === 'ARRIVED' || status === 'SOLD' ? 'completed' : 'active';
+}
+
 @Component({
   selector: 'app-logistics',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSlideToggleModule, MatTableModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSlideToggleModule,
+    MatTableModule,
+    MatExpansionModule,
+    BaseChartDirective,
+  ],
   templateUrl: './logistics.component.html',
 })
 export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly shipments = signal<Shipment[]>([]);
   readonly liveMonitoring = signal(false);
   readonly columns = ['truckId', 'commodity', 'quantity', 'destinationMarket', 'status', 'progress', 'actions'];
+
+  readonly activePanelOpen = signal(true);
+  readonly completedPanelOpen = signal(false);
+
+  readonly activeShipments = computed(() => this.shipments().filter((s) => shipmentSection(s.status) === 'active'));
+  readonly completedShipments = computed(() => this.shipments().filter((s) => shipmentSection(s.status) === 'completed'));
+
+  readonly activeQuantity = computed(() => this.activeShipments().reduce((acc, s) => acc + (s.quantity ?? 0), 0));
+  readonly completedQuantity = computed(() => this.completedShipments().reduce((acc, s) => acc + (s.quantity ?? 0), 0));
+  readonly activeAvgProgress = computed(() => {
+    const list = this.activeShipments();
+    if (list.length === 0) return 0;
+    return list.reduce((acc, s) => acc + (s.progress ?? 0), 0) / list.length;
+  });
+  readonly completedAvgAge = computed(() => {
+    const list = this.completedShipments().filter((s) => !!s.createdAt);
+    if (list.length === 0) return 0;
+    const totalHours = list.reduce((acc, s) => acc + (Date.now() - new Date(s.createdAt!).getTime()) / 3.6e6, 0);
+    return totalHours / list.length;
+  });
+
+  // Analysis strip
+  readonly fleetBreakdown = computed(() => {
+    const list = this.shipments();
+    return {
+      inTransit: list.filter((s) => s.status === 'IN_TRANSIT').length,
+      arrived: list.filter((s) => s.status === 'ARRIVED').length,
+      sold: list.filter((s) => s.status === 'SOLD').length,
+    };
+  });
+
+  readonly topDestinations = computed(() => {
+    const totals = new Map<string, { quantity: number; count: number }>();
+    for (const s of this.shipments()) {
+      const cur = totals.get(s.destinationMarket) ?? { quantity: 0, count: 0 };
+      cur.quantity += s.quantity ?? 0;
+      cur.count += 1;
+      totals.set(s.destinationMarket, cur);
+    }
+    return Array.from(totals.entries())
+      .map(([market, v]) => ({ market, ...v }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+  });
+
+  readonly maxDestinationQuantity = computed(() => this.topDestinations().reduce((m, d) => Math.max(m, d.quantity), 0) || 1);
+
+  readonly atRiskShipments = computed(() =>
+    this.activeShipments().filter((s) => {
+      if (!s.createdAt) return false;
+      const hoursSinceDispatch = (Date.now() - new Date(s.createdAt).getTime()) / 3.6e6;
+      return hoursSinceDispatch > 48 && (s.progress ?? 0) < 0.4;
+    }),
+  );
+
+  readonly commodityChartData = computed<ChartData<'doughnut'>>(() => {
+    const totals = new Map<string, number>();
+    for (const s of this.activeShipments()) {
+      totals.set(s.commodity, (totals.get(s.commodity) ?? 0) + (s.quantity ?? 0));
+    }
+    const entries = Array.from(totals.entries()).sort((a, b) => b[1] - a[1]);
+    return {
+      labels: entries.map(([c]) => c),
+      datasets: [
+        {
+          data: entries.map(([, q]) => q),
+          backgroundColor: ['#059669', '#0d9488', '#10b981', '#34d399', '#2dd4bf', '#5eead4', '#6ee7b7', '#99f6e4'],
+        },
+      ],
+    };
+  });
+
+  readonly doughnutOptions: ChartConfiguration['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position: 'right', labels: { color: '#334155', boxWidth: 10, font: { size: 10 } } } },
+  };
 
   truckId = '';
   commodity = '';
@@ -66,10 +173,14 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly optimizing = signal(false);
 
   private map?: L.Map;
-  private clusterGroup?: L.MarkerClusterGroup;
-  private destLayer?: L.LayerGroup;
-  private routeLayer?: L.LayerGroup;
+  private activeCluster?: L.MarkerClusterGroup;
+  private completedCluster?: L.MarkerClusterGroup;
+  private activeDestLayer?: L.LayerGroup;
+  private completedDestLayer?: L.LayerGroup;
+  private activeRouteLayer?: L.LayerGroup;
+  private completedRouteLayer?: L.LayerGroup;
   private tracked = new Map<string | number, TrackedShipment>();
+  private destMarkers = new Map<string | number, DestMarker>();
   private pollHandle?: ReturnType<typeof setInterval>;
 
   constructor(private api: ApiService, private snackBar: MatSnackBar) {}
@@ -95,7 +206,9 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private initMap(): void {
-    this.map = L.map('logistics-map', { zoomControl: true, attributionControl: true }).setView([22.9734, 78.6569], 5);
+    this.map = L.map('logistics-map', { zoomControl: true, attributionControl: true, minZoom: 4 }).setView([22.4, 80], 5);
+    this.map.setMaxBounds(INDIA_BOUNDS);
+    (this.map as any).options.maxBoundsViscosity = 1.0;
 
     const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
@@ -122,19 +235,58 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       )
       .addTo(this.map);
 
-    this.clusterGroup = (L as any).markerClusterGroup({
-      maxClusterRadius: 45,
-      spiderfyOnMaxZoom: true,
-      showCoverageOnHover: false,
-    });
-    this.destLayer = L.layerGroup();
-    this.routeLayer = L.layerGroup();
-    this.routeLayer.addTo(this.map);
-    this.destLayer.addTo(this.map);
-    this.clusterGroup!.addTo(this.map);
+    this.activeCluster = (L as any).markerClusterGroup({ maxClusterRadius: 40, spiderfyOnMaxZoom: true, showCoverageOnHover: false });
+    this.completedCluster = (L as any).markerClusterGroup({ maxClusterRadius: 40, spiderfyOnMaxZoom: true, showCoverageOnHover: false });
+    this.activeDestLayer = L.layerGroup();
+    this.completedDestLayer = L.layerGroup();
+    this.activeRouteLayer = L.layerGroup();
+    this.completedRouteLayer = L.layerGroup();
+
+    if (this.activePanelOpen()) {
+      this.activeRouteLayer.addTo(this.map);
+      this.activeDestLayer.addTo(this.map);
+      this.activeCluster!.addTo(this.map);
+    }
+    if (this.completedPanelOpen()) {
+      this.completedRouteLayer.addTo(this.map);
+      this.completedDestLayer.addTo(this.map);
+      this.completedCluster!.addTo(this.map);
+    }
 
     this.addLegend();
     this.renderMarkers();
+  }
+
+  toggleActivePanel(opened: boolean): void {
+    this.activePanelOpen.set(opened);
+    if (!this.map || !this.activeCluster || !this.activeDestLayer || !this.activeRouteLayer) {
+      return;
+    }
+    if (opened) {
+      this.activeRouteLayer.addTo(this.map);
+      this.activeDestLayer.addTo(this.map);
+      this.activeCluster.addTo(this.map);
+    } else {
+      this.map.removeLayer(this.activeRouteLayer);
+      this.map.removeLayer(this.activeDestLayer);
+      this.map.removeLayer(this.activeCluster);
+    }
+  }
+
+  toggleCompletedPanel(opened: boolean): void {
+    this.completedPanelOpen.set(opened);
+    if (!this.map || !this.completedCluster || !this.completedDestLayer || !this.completedRouteLayer) {
+      return;
+    }
+    if (opened) {
+      this.completedRouteLayer.addTo(this.map);
+      this.completedDestLayer.addTo(this.map);
+      this.completedCluster.addTo(this.map);
+    } else {
+      this.map.removeLayer(this.completedRouteLayer);
+      this.map.removeLayer(this.completedDestLayer);
+      this.map.removeLayer(this.completedCluster);
+    }
   }
 
   private addLegend(): void {
@@ -147,7 +299,7 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       div.innerHTML = `
         <div class="map-legend__title">Legend</div>
         <div class="map-legend__row"><span class="map-legend__dot" style="background:#059669"></span>In transit</div>
-        <div class="map-legend__row"><span class="map-legend__dot" style="background:#2563eb"></span>Delivered</div>
+        <div class="map-legend__row"><span class="map-legend__dot" style="background:#2563eb"></span>Completed</div>
         <div class="map-legend__row"><span class="map-legend__square" style="background:#f59e0b"></span>Destination market</div>
         <div class="map-legend__row"><span class="map-legend__line map-legend__line--solid"></span>Traveled</div>
         <div class="map-legend__row"><span class="map-legend__line map-legend__line--dashed"></span>Remaining</div>
@@ -159,14 +311,23 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private statusColor(status: string): string {
-    if (status === 'DELIVERED' || status === 'SOLD') {
-      return '#2563eb';
-    }
-    return '#059669';
+    return shipmentSection(status) === 'completed' ? '#2563eb' : '#059669';
+  }
+
+  private clusterFor(section: 'active' | 'completed'): L.MarkerClusterGroup {
+    return section === 'active' ? this.activeCluster! : this.completedCluster!;
+  }
+
+  private routeLayerFor(section: 'active' | 'completed'): L.LayerGroup {
+    return section === 'active' ? this.activeRouteLayer! : this.completedRouteLayer!;
+  }
+
+  private destLayerFor(section: 'active' | 'completed'): L.LayerGroup {
+    return section === 'active' ? this.activeDestLayer! : this.completedDestLayer!;
   }
 
   private etaLabel(s: Shipment): string {
-    if (s.status === 'DELIVERED') {
+    if (s.status === 'SOLD' || s.status === 'ARRIVED') {
       return 'Arrived';
     }
     const progress = s.progress ?? 0;
@@ -203,7 +364,7 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private renderMarkers(): void {
-    if (!this.clusterGroup || !this.destLayer || !this.routeLayer) {
+    if (!this.activeCluster || !this.completedCluster || !this.activeDestLayer || !this.completedDestLayer || !this.activeRouteLayer || !this.completedRouteLayer) {
       return;
     }
     const list = this.shipments();
@@ -214,6 +375,7 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
         continue;
       }
       seenIds.add(s.id);
+      const section = shipmentSection(s.status);
       const newLatLng = L.latLng(s.currentLat, s.currentLon);
       const existing = this.tracked.get(s.id);
 
@@ -223,16 +385,16 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
           : 0;
         const icon = L.divIcon({
           className: '',
-          html: truckIconHtml(rot, s.status !== 'DELIVERED'),
+          html: truckIconHtml(rot, section === 'active'),
           iconSize: [30, 30],
           iconAnchor: [15, 15],
         });
         const marker = L.marker(newLatLng, { icon }).bindPopup(this.popupHtml(s));
-        this.clusterGroup.addLayer(marker);
+        this.clusterFor(section).addLayer(marker);
 
         const routeLine = L.layerGroup();
         this.drawRoute(routeLine, s);
-        routeLine.addTo(this.routeLayer);
+        routeLine.addTo(this.routeLayerFor(section));
 
         if (s.destinationLat != null && s.destinationLon != null) {
           const destIcon = L.divIcon({
@@ -241,13 +403,26 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
             iconSize: [12, 12],
             iconAnchor: [6, 6],
           });
-          L.marker([s.destinationLat, s.destinationLon], { icon: destIcon })
-            .bindPopup(`Destination: ${s.destinationMarket}`)
-            .addTo(this.destLayer);
+          const destMarker = L.marker([s.destinationLat, s.destinationLon], { icon: destIcon }).bindPopup(`Destination: ${s.destinationMarket}`);
+          destMarker.addTo(this.destLayerFor(section));
+          this.destMarkers.set(s.id, { marker: destMarker, section });
         }
 
-        this.tracked.set(s.id, { marker, routeLine, currentLatLng: newLatLng, shipment: s });
+        this.tracked.set(s.id, { marker, routeLine, currentLatLng: newLatLng, shipment: s, section });
       } else {
+        if (existing.section !== section) {
+          this.clusterFor(existing.section).removeLayer(existing.marker);
+          this.clusterFor(section).addLayer(existing.marker);
+          this.routeLayerFor(existing.section).removeLayer(existing.routeLine);
+          existing.routeLine.addTo(this.routeLayerFor(section));
+          const destEntry = this.destMarkers.get(s.id);
+          if (destEntry) {
+            this.destLayerFor(destEntry.section).removeLayer(destEntry.marker);
+            destEntry.marker.addTo(this.destLayerFor(section));
+            destEntry.section = section;
+          }
+          existing.section = section;
+        }
         existing.shipment = s;
         existing.marker.setPopupContent(this.popupHtml(s));
         existing.routeLine.clearLayers();
@@ -261,9 +436,14 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
         if (t.animFrame) {
           cancelAnimationFrame(t.animFrame);
         }
-        this.clusterGroup.removeLayer(t.marker);
+        this.clusterFor(t.section).removeLayer(t.marker);
         t.routeLine.remove();
         this.tracked.delete(id);
+        const destEntry = this.destMarkers.get(id);
+        if (destEntry) {
+          this.destLayerFor(destEntry.section).removeLayer(destEntry.marker);
+          this.destMarkers.delete(id);
+        }
       }
     }
   }
@@ -295,7 +475,7 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     t.marker.setIcon(
       L.divIcon({
         className: '',
-        html: truckIconHtml(rot, s.status !== 'DELIVERED'),
+        html: truckIconHtml(rot, t.section === 'active'),
         iconSize: [30, 30],
         iconAnchor: [15, 15],
       }),

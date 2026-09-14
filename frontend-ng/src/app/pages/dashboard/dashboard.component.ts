@@ -128,7 +128,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         this.errorInventory.set('Inventory data unavailable.');
       }
       if (shipments) {
-        this.activeShipments.set(shipments.filter((s) => s.status !== 'DELIVERED').length);
+        this.activeShipments.set(shipments.filter((s) => s.status !== 'SOLD').length);
       }
       if (summary) {
         this.totalRevenue.set(summary.totalRevenue ?? 0);
@@ -265,7 +265,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
           this.loadingMap.set(false);
           return;
         }
-        this.pendingShipments = shipments.filter((s) => s.status !== 'DELIVERED');
+        this.pendingShipments = shipments.filter((s) => s.status !== 'SOLD');
         this.renderMapMarkers();
         this.loadingMap.set(false);
         setTimeout(() => this.map?.invalidateSize(), 0);
@@ -277,8 +277,9 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!el) {
       return;
     }
-    this.map = L.map('dashboard-mini-map', { zoomControl: false, attributionControl: false, dragging: true, scrollWheelZoom: false }).setView([22.9734, 78.6569], 4.3);
+    this.map = L.map('dashboard-mini-map', { zoomControl: false, attributionControl: false, dragging: true, scrollWheelZoom: false, minZoom: 4 }).setView([22.4, 80], 4.6);
     this.map.setMaxBounds([[4, 60], [40, 100]]);
+    (this.map as any).options.maxBoundsViscosity = 1.0;
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(this.map);
     this.markersLayer = L.layerGroup().addTo(this.map);
     this.renderMapMarkers();
