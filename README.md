@@ -1,5 +1,5 @@
 <img
-    src="agriOS.png"
+    src="agrisOSMain.png"
     alt="Build Your Own Agent Now - n8n AI Agents"
     width="100%"
   />
