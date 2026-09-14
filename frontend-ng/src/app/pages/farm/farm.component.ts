@@ -83,7 +83,7 @@ export class FarmComponent implements OnInit {
     if (plot.id === undefined) {
       return;
     }
-    this.api.harvest({ plotRowId: plot.id, commodity: plot.commodity, quantity: plot.quantity }).subscribe({
+    this.api.harvest({ plotRowId: plot.id, commodity: plot.commodity, quantity: plot.quantityPlanted }).subscribe({
       next: () => {
         this.snackBar.open('Harvested', 'Dismiss', { duration: 2500 });
         this.loadPlots();

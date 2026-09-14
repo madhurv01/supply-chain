@@ -8,15 +8,15 @@
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="stat-card">
         <p class="text-xs text-slate-600">Total Revenue</p>
-        <p class="text-2xl font-semibold text-slate-900 mt-1">₹{{ s.totalRevenue | number:'1.0-0' }}</p>
+        <p class="text-2xl font-semibold text-slate-900 mt-1">{{ s.totalRevenue | currency:'INR':'symbol':'1.0-2' }}</p>
       </div>
       <div class="stat-card">
         <p class="text-xs text-slate-600">Total Sales</p>
-        <p class="text-2xl font-semibold accent-text mt-1">{{ s.totalSales }}</p>
+        <p class="text-2xl font-semibold accent-text mt-1">{{ s.totalSales | number:'1.0-0' }}</p>
       </div>
       <div class="stat-card">
         <p class="text-xs text-slate-600">Avg Sale Value</p>
-        <p class="text-2xl font-semibold text-slate-900 mt-1">₹{{ s.avgSaleValue | number:'1.0-0' }}</p>
+        <p class="text-2xl font-semibold text-slate-900 mt-1">{{ s.avgSaleValue | currency:'INR':'symbol':'1.0-2' }}</p>
       </div>
     </div>
   }
@@ -29,7 +29,7 @@
           <mat-label>Arrived Shipment</mat-label>
           <mat-select [(ngModel)]="selectedShipment" (selectionChange)="onShipmentChange()">
             @for (sh of arrivedShipments(); track sh.id) {
-              <mat-option [value]="sh">{{ sh.commodity }} — {{ sh.quantity }}kg — {{ sh.destinationMarket }}</mat-option>
+              <mat-option [value]="sh">{{ sh.commodity }} — {{ sh.quantity | number:'1.0-2' }}kg — {{ sh.destinationMarket }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
@@ -74,11 +74,11 @@
         </ng-container>
         <ng-container matColumnDef="quantity">
           <th mat-header-cell *matHeaderCellDef>Qty</th>
-          <td mat-cell *matCellDef="let row">{{ row.quantity }}</td>
+          <td mat-cell *matCellDef="let row">{{ row.quantity | number:'1.0-2' }}</td>
         </ng-container>
         <ng-container matColumnDef="pricePerUnit">
           <th mat-header-cell *matHeaderCellDef>Price/Unit</th>
-          <td mat-cell *matCellDef="let row">₹{{ row.pricePerUnit }}</td>
+          <td mat-cell *matCellDef="let row">{{ row.pricePerUnit | currency:'INR':'symbol':'1.0-2' }}</td>
         </ng-container>
         <ng-container matColumnDef="market">
           <th mat-header-cell *matHeaderCellDef>Market</th>

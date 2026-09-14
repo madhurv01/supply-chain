@@ -33,11 +33,11 @@ public class MarketService(AgriChainDbContext db)
         {
             ["found"] = true,
             ["commodity"] = commodity,
-            ["avg_price"] = Math.Round(avgPrice, 2),
-            ["volatility_pct"] = Math.Round(volatility, 2),
-            ["best_market"] = bestMarket,
-            ["best_price"] = Math.Round((double)bestRow.ModalPrice, 2),
-            ["demand_indicator"] = demandIndicator,
+            ["avgPrice"] = Math.Round(avgPrice, 2),
+            ["volatility"] = Math.Round(volatility, 2),
+            ["topMarket"] = bestMarket,
+            ["topPrice"] = Math.Round((double)bestRow.ModalPrice, 2),
+            ["demandIndicator"] = demandIndicator,
         };
     }
 

@@ -41,11 +41,11 @@
               }
             </div>
             <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-slate-600">
-              @if (rec.price != null) { <div>Price: <span class="text-slate-800">₹{{ rec.price }}</span></div> }
-              @if (rec.distanceKm != null) { <div>Distance: <span class="text-slate-800">{{ rec.distanceKm }} km</span></div> }
-              @if (rec.transitTimeHours != null) { <div>Transit: <span class="text-slate-800">{{ rec.transitTimeHours }}h</span></div> }
+              @if (rec.price != null) { <div>Price: <span class="text-slate-800">{{ rec.price | currency:'INR':'symbol':'1.0-2' }}</span></div> }
+              @if (rec.distanceKm != null) { <div>Distance: <span class="text-slate-800">{{ rec.distanceKm | number:'1.0-1' }} km</span></div> }
+              @if (rec.transitTimeHours != null) { <div>Transit: <span class="text-slate-800">{{ rec.transitTimeHours | number:'1.0-1' }}h</span></div> }
               @if (rec.spoilageRisk != null) { <div>Spoilage: <span class="text-slate-800">{{ rec.spoilageRisk }}</span></div> }
-              @if (rec.netScore != null) { <div>Score: <span class="text-slate-800">{{ rec.netScore }}</span></div> }
+              @if (rec.netScore != null) { <div>Score: <span class="text-slate-800">{{ rec.netScore | currency:'INR':'symbol':'1.0-2' }}</span></div> }
             </div>
             @if (rec.reasoning) {
               <p class="text-xs text-slate-600 leading-relaxed">{{ rec.reasoning }}</p>
@@ -101,7 +101,7 @@
         </ng-container>
         <ng-container matColumnDef="quantity">
           <th mat-header-cell *matHeaderCellDef>Qty</th>
-          <td mat-cell *matCellDef="let row">{{ row.quantity }}</td>
+          <td mat-cell *matCellDef="let row">{{ row.quantity | number:'1.0-2' }}</td>
         </ng-container>
         <ng-container matColumnDef="destinationMarket">
           <th mat-header-cell *matHeaderCellDef>Destination</th>
@@ -113,7 +113,7 @@
         </ng-container>
         <ng-container matColumnDef="progress">
           <th mat-header-cell *matHeaderCellDef>Progress</th>
-          <td mat-cell *matCellDef="let row">{{ row.progress }}%</td>
+          <td mat-cell *matCellDef="let row">{{ row.progress | percent:'1.0-0' }}</td>
         </ng-container>
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef></th>

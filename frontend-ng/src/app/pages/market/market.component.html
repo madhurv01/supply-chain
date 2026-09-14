@@ -37,7 +37,7 @@
       </div>
       <div class="stat-card">
         <p class="text-xs text-slate-600">Top Price</p>
-        <p class="text-lg font-semibold accent-text mt-1">₹{{ r.topPrice }}</p>
+        <p class="text-lg font-semibold accent-text mt-1">{{ r.topPrice | currency:'INR':'symbol':'1.0-2' }}</p>
       </div>
     </div>
     <div class="card p-4 h-80">

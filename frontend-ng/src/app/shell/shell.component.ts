@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, ElementRef, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../core/services/auth.service';
@@ -9,6 +9,11 @@ interface NavItem {
   path: string;
   icon: string;
 }
+
+const WIDTH_KEY = 'agrichain.sidebar.width';
+const MIN_WIDTH = 200;
+const MAX_WIDTH = 380;
+const DEFAULT_WIDTH = 256;
 
 @Component({
   selector: 'app-shell',
@@ -29,18 +34,27 @@ export class ShellComponent {
     { label: 'Crop Grading', path: '/grading', icon: 'photo_camera' },
   ];
 
-  readonly darkMode = signal(false);
-  readonly sidebarOpen = signal(false);
+  readonly tickerMessages: string[] = [
+    '🌾 Market price intelligence across every major mandi',
+    '🚚 Live shipment tracking across India',
+    '🤖 AI-powered routing & crop grading',
+    '📈 Real-time market analysis & forecasting',
+    '🌱 Farm-to-warehouse supply chain visibility',
+  ];
 
-  constructor(private auth: AuthService, private router: Router) {}
+  readonly sidebarOpen = signal(false);
+  readonly sidebarWidth = signal(this.readStoredWidth());
+  readonly resizing = signal(false);
+
+  constructor(private auth: AuthService, private router: Router, private hostEl: ElementRef<HTMLElement>) {}
 
   get userEmail(): string | null {
     return this.auth.email();
   }
 
-  toggleTheme(): void {
-    this.darkMode.update((v) => !v);
-    document.documentElement.classList.toggle('dark', this.darkMode());
+  get userInitial(): string {
+    const email = this.userEmail;
+    return email ? email.charAt(0).toUpperCase() : 'U';
   }
 
   toggleSidebar(): void {
@@ -50,5 +64,45 @@ export class ShellComponent {
   logout(): void {
     this.auth.logout();
     this.router.navigate(['/login']);
+  }
+
+  private readStoredWidth(): number {
+    try {
+      const stored = localStorage.getItem(WIDTH_KEY);
+      const parsed = stored ? parseInt(stored, 10) : DEFAULT_WIDTH;
+      if (Number.isFinite(parsed)) {
+        return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, parsed));
+      }
+    } catch {
+      // ignore storage errors
+    }
+    return DEFAULT_WIDTH;
+  }
+
+  onResizeStart(event: PointerEvent): void {
+    event.preventDefault();
+    this.resizing.set(true);
+    const startX = event.clientX;
+    const startWidth = this.sidebarWidth();
+
+    const onMove = (moveEvent: PointerEvent) => {
+      const delta = moveEvent.clientX - startX;
+      const next = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + delta));
+      this.sidebarWidth.set(next);
+    };
+
+    const onUp = () => {
+      this.resizing.set(false);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      try {
+        localStorage.setItem(WIDTH_KEY, String(this.sidebarWidth()));
+      } catch {
+        // ignore storage errors
+      }
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
   }
 }

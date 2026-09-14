@@ -28,17 +28,23 @@ public class FinanceService(AgriChainDbContext db)
     {
         var sales = await GetSalesDataAsync();
         if (sales.Count == 0)
-            return new() { ["total_revenue"] = 0m, ["total_sales"] = 0, ["avg_sale_value"] = 0m };
+            return new() { ["totalRevenue"] = 0m, ["totalSales"] = 0, ["avgSaleValue"] = 0m, ["byCommodity"] = new List<object>() };
 
         var totalRevenue = sales.Sum(s => s.TotalRevenue);
         var totalSales = sales.Count;
         var avgSaleValue = totalSales > 0 ? totalRevenue / totalSales : 0m;
+        var byCommodity = sales
+            .GroupBy(s => s.Commodity)
+            .Select(g => new { commodity = g.Key, revenue = Math.Round(g.Sum(s => s.TotalRevenue), 2) })
+            .OrderByDescending(x => x.revenue)
+            .ToList();
 
         return new()
         {
-            ["total_revenue"] = Math.Round(totalRevenue, 2),
-            ["total_sales"] = totalSales,
-            ["avg_sale_value"] = Math.Round(avgSaleValue, 2),
+            ["totalRevenue"] = Math.Round(totalRevenue, 2),
+            ["totalSales"] = totalSales,
+            ["avgSaleValue"] = Math.Round(avgSaleValue, 2),
+            ["byCommodity"] = byCommodity,
         };
     }
 }

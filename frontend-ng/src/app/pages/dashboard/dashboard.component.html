@@ -1,44 +1,182 @@
 <div class="flex flex-col gap-6">
   <div>
     <h1 class="text-xl font-semibold text-slate-900">Dashboard</h1>
-    <p class="text-sm text-slate-600">Overview of your supply chain</p>
+    <p class="text-sm text-slate-600">Real-time overview of your supply chain</p>
   </div>
 
-  @if (error()) {
-    <div class="card p-3 text-amber-800 text-sm border-amber-300 bg-amber-50">{{ error() }}</div>
+  @if (errorKpis()) {
+    <div class="card p-3 text-amber-800 text-sm border-amber-300 bg-amber-50">{{ errorKpis() }}</div>
   }
 
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="stat-card">
       <p class="text-xs text-slate-600">Inventory Total</p>
-      <p class="text-2xl font-semibold text-slate-900 mt-1">{{ totalInventory() | number:'1.0-0' }}</p>
+      <p class="text-2xl font-semibold text-slate-900 mt-1">{{ loadingKpis() ? '…' : (totalInventory() | number:'1.0-0') }}</p>
     </div>
     <div class="stat-card">
       <p class="text-xs text-slate-600">Active Shipments</p>
-      <p class="text-2xl font-semibold accent-text mt-1">{{ activeShipments() }}</p>
+      <p class="text-2xl font-semibold accent-text mt-1">{{ loadingKpis() ? '…' : activeShipments() }}</p>
     </div>
     <div class="stat-card">
       <p class="text-xs text-slate-600">Revenue</p>
-      <p class="text-2xl font-semibold text-slate-900 mt-1">₹{{ totalRevenue() | number:'1.0-0' }}</p>
+      <p class="text-2xl font-semibold text-slate-900 mt-1">{{ loadingKpis() ? '…' : (totalRevenue() | currency:'INR':'symbol':'1.0-2') }}</p>
     </div>
     <div class="stat-card">
       <p class="text-xs text-slate-600">Growing Plots</p>
-      <p class="text-2xl font-semibold accent-text mt-1">{{ growingPlots() }}</p>
+      <p class="text-2xl font-semibold accent-text mt-1">{{ loadingKpis() ? '…' : growingPlots() }}</p>
     </div>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    <div class="card p-4 h-80">
-      <p class="text-sm font-medium text-slate-700 mb-2">Inventory Mix</p>
-      <div class="h-64">
-        <canvas baseChart [data]="inventoryChartData()" [options]="doughnutOptions" type="doughnut"></canvas>
-      </div>
+    <!-- Panel 1: Revenue trend -->
+    <div class="card p-4 h-80 flex flex-col">
+      <p class="text-sm font-medium text-slate-700 mb-2">📈 Revenue Trend</p>
+      @if (loadingRevenue()) {
+        <div class="flex-1 flex items-center justify-center text-sm text-slate-400">Loading…</div>
+      } @else if (errorRevenue()) {
+        <div class="flex-1 flex items-center justify-center text-sm text-amber-700">{{ errorRevenue() }}</div>
+      } @else {
+        <div class="flex-1">
+          <canvas baseChart [data]="revenueTrendData()" [options]="lineOptions" type="line"></canvas>
+        </div>
+      }
     </div>
-    <div class="card p-4 h-80">
-      <p class="text-sm font-medium text-slate-700 mb-2">Revenue by Commodity</p>
-      <div class="h-64">
-        <canvas baseChart [data]="revenueChartData()" [options]="chartOptions" type="bar"></canvas>
+
+    <!-- Panel 2: Inventory composition -->
+    <div class="card p-4 h-80 flex flex-col">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-sm font-medium text-slate-700">🧺 Inventory Composition</p>
+        @if (!loadingMovers() && inventoryValue() > 0) {
+          <span class="text-xs text-slate-500">Est. value: <span class="font-semibold accent-text">{{ inventoryValue() | currency:'INR':'symbol':'1.0-0' }}</span></span>
+        }
       </div>
+      @if (loadingInventory()) {
+        <div class="flex-1 flex items-center justify-center text-sm text-slate-400">Loading…</div>
+      } @else if (errorInventory()) {
+        <div class="flex-1 flex items-center justify-center text-sm text-amber-700">{{ errorInventory() }}</div>
+      } @else {
+        <div class="flex-1">
+          <canvas baseChart [data]="inventoryChartData()" [options]="doughnutOptions" type="doughnut"></canvas>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <!-- Panel 3: Live shipment map -->
+    <div class="card p-4 h-80 flex flex-col">
+      <p class="text-sm font-medium text-slate-700 mb-2">🚚 Live Shipment Map</p>
+      @if (errorMap()) {
+        <div class="flex-1 flex items-center justify-center text-sm text-amber-700">{{ errorMap() }}</div>
+      } @else {
+        <div class="flex-1 relative rounded-lg overflow-hidden">
+          @if (loadingMap()) {
+            <div class="absolute inset-0 flex items-center justify-center text-sm text-slate-400 bg-white/60 z-[1000]">Loading…</div>
+          }
+          <div id="dashboard-mini-map" class="w-full h-full"></div>
+        </div>
+      }
+    </div>
+
+    <!-- Panel 4: Harvest readiness -->
+    <div class="card p-4 h-80 flex flex-col">
+      <p class="text-sm font-medium text-slate-700 mb-2">🌾 Harvest Readiness</p>
+      @if (loadingHarvest()) {
+        <div class="flex-1 flex items-center justify-center text-sm text-slate-400">Loading…</div>
+      } @else if (errorHarvest()) {
+        <div class="flex-1 flex items-center justify-center text-sm text-amber-700">{{ errorHarvest() }}</div>
+      } @else if (harvestRows().length === 0) {
+        <div class="flex-1 flex items-center justify-center text-sm text-slate-500">No growing plots.</div>
+      } @else {
+        <div class="flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
+          @for (p of harvestRows(); track p.plotId) {
+            <div class="flex items-center justify-between text-sm border border-surface-border rounded-lg px-3 py-2" [class.bg-amber-50]="p.dueSoon" [class.border-amber-300]="p.dueSoon">
+              <div>
+                <p class="font-medium text-slate-800">{{ p.commodity }} <span class="text-xs text-slate-500">({{ p.plotId }})</span></p>
+                <p class="text-xs text-slate-500">{{ p.quantityPlanted | number:'1.0-2' }} kg planted</p>
+              </div>
+              <div class="text-right">
+                @if (p.dueSoon) {
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-medium">
+                    {{ p.daysUntilHarvest <= 0 ? 'Due now' : p.daysUntilHarvest + 'd left' }}
+                  </span>
+                } @else {
+                  <span class="text-xs text-slate-500">{{ p.daysUntilHarvest }}d left</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <!-- Panel 5: Market volatility / top movers -->
+    <div class="card p-4 h-80 flex flex-col">
+      <p class="text-sm font-medium text-slate-700 mb-2">📊 Price Volatility — Top Movers</p>
+      @if (loadingMovers()) {
+        <div class="flex-1 flex items-center justify-center text-sm text-slate-400">Loading…</div>
+      } @else if (errorMovers()) {
+        <div class="flex-1 flex items-center justify-center text-sm text-amber-700">{{ errorMovers() }}</div>
+      } @else if (moverRows().length === 0) {
+        <div class="flex-1 flex items-center justify-center text-sm text-slate-500">No price data available.</div>
+      } @else {
+        <div class="flex-1 overflow-y-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-xs text-slate-500 text-left">
+                <th class="font-medium pb-2">Commodity</th>
+                <th class="font-medium pb-2">Avg Price</th>
+                <th class="font-medium pb-2">Volatility</th>
+                <th class="font-medium pb-2">Best Market</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (m of moverRows(); track m.commodity) {
+                <tr class="border-t border-surface-border">
+                  <td class="py-2 text-slate-800">{{ m.commodity }}</td>
+                  <td class="py-2 text-slate-800">{{ m.avgPrice | currency:'INR':'symbol':'1.0-2' }}</td>
+                  <td class="py-2">
+                    <span class="text-xs px-2 py-0.5 rounded-full" [class.bg-red-100]="m.volatility >= 10" [class.text-red-700]="m.volatility >= 10" [class.bg-accent-dim]="m.volatility < 10" [class.accent-text]="m.volatility < 10">
+                      {{ m.volatility | number:'1.0-1' }}%
+                    </span>
+                  </td>
+                  <td class="py-2 text-slate-600 text-xs">{{ m.topMarket }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+    <!-- Panel 6: Route optimizer quick insight -->
+    <div class="card p-4 h-80 flex flex-col">
+      <p class="text-sm font-medium text-slate-700 mb-2">🧭 Best Shipping Opportunity</p>
+      @if (loadingOptimizer()) {
+        <div class="flex-1 flex items-center justify-center text-sm text-slate-400">Loading…</div>
+      } @else if (errorOptimizer()) {
+        <div class="flex-1 flex items-center justify-center text-sm text-amber-700">{{ errorOptimizer() }}</div>
+      } @else if (!optimizerRec()) {
+        <div class="flex-1 flex items-center justify-center text-sm text-slate-500">No recommendation available.</div>
+      } @else {
+        <div class="flex-1 flex flex-col gap-3">
+          <p class="text-xs text-slate-500">Based on current inventory of <span class="font-medium text-slate-700">{{ optimizerCommodity() }}</span>, best net-value destination:</p>
+          <div class="stat-card">
+            <div class="flex items-center justify-between">
+              <p class="text-lg font-semibold text-slate-900">{{ optimizerRec()?.market }}</p>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-accent-dim accent-text">Top pick</span>
+            </div>
+            <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-slate-600 mt-2">
+              @if (optimizerRec()?.price != null) { <div>Price: <span class="text-slate-800">{{ optimizerRec()?.price | currency:'INR':'symbol':'1.0-2' }}</span></div> }
+              @if (optimizerRec()?.distanceKm != null) { <div>Distance: <span class="text-slate-800">{{ optimizerRec()?.distanceKm | number:'1.0-1' }} km</span></div> }
+              @if (optimizerRec()?.spoilageRisk != null) { <div>Spoilage: <span class="text-slate-800">{{ optimizerRec()?.spoilageRisk }}</span></div> }
+              @if (optimizerRec()?.netScore != null) { <div>Net value: <span class="text-slate-800">{{ optimizerRec()?.netScore | currency:'INR':'symbol':'1.0-2' }}</span></div> }
+            </div>
+          </div>
+        </div>
+      }
     </div>
   </div>
 </div>

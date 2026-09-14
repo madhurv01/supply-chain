@@ -62,7 +62,7 @@ public class AgriChainMcpTools(
     public Task<Dictionary<string, object>> GetFinancialSummary() => financeService.GetFinancialSummaryAsync();
 
     [McpServerTool(Name = "optimize_shipment_route"), Description("Compute the best destination markets for shipping a commodity, ranked by net expected value (price, distance, transit time, spoilage risk, transport cost).")]
-    public Task<Dictionary<string, object?>> OptimizeShipmentRoute(string commodity, decimal quantity) =>
+    public Task<List<Dictionary<string, object>>> OptimizeShipmentRoute(string commodity, decimal quantity) =>
         routingOptimizer.OptimizeShipmentRouteAsync(commodity, quantity);
 
     [McpServerTool(Name = "grade_crop_photo"), Description("Grade a crop photo (base64-encoded JPEG/PNG) for quality, returning grade A/B/C, defects, and confidence.")]

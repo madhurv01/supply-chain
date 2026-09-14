@@ -51,7 +51,7 @@
             <p class="font-semibold text-slate-900">{{ p.commodity }}</p>
             <span class="text-xs px-2 py-0.5 rounded-full bg-accent-dim accent-text">{{ p.plotId }}</span>
           </div>
-          <p class="text-sm text-slate-600">Qty: {{ p.quantity }}</p>
+          <p class="text-sm text-slate-600">Qty: {{ p.quantityPlanted | number:'1.0-2' }}</p>
           <p class="text-xs text-slate-500">Planted: {{ p.datePlanted | date:'mediumDate' }}</p>
           <p class="text-xs text-slate-500">Expected: {{ p.expectedHarvestDate | date:'mediumDate' }}</p>
           <button mat-stroked-button color="primary" class="!rounded-lg !mt-2" (click)="harvest(p)">Harvest Now</button>

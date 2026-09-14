@@ -1,12 +1,15 @@
-<div class="min-h-screen w-full flex items-center justify-center px-4" style="background: radial-gradient(circle at 20% 15%, #ecfdf5 0%, #f5f6f8 45%, #eef1f5 100%);">
+<div
+  class="min-h-screen w-full flex items-center justify-center px-4"
+  style="background-image: linear-gradient(160deg, rgba(6, 78, 59, 0.55) 0%, rgba(15, 23, 42, 0.45) 55%, rgba(4, 47, 46, 0.6) 100%), url('https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=1920&q=80'); background-size: cover; background-position: center; background-attachment: fixed;"
+>
   <div class="w-full max-w-md">
     <div class="flex flex-col items-center mb-8">
-      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-accent-emerald to-accent-lime flex items-center justify-center font-bold text-xl text-white shadow-md mb-3">A</div>
-      <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Agri-Chain OS</h1>
-      <p class="text-slate-600 text-sm mt-1">Agricultural supply-chain intelligence</p>
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-accent-emerald to-accent-lime flex items-center justify-center font-bold text-xl text-white shadow-md mb-3 login-logo">A</div>
+      <h1 class="text-2xl font-semibold tracking-tight text-white drop-shadow">Agri-Chain OS</h1>
+      <p class="text-white/85 text-sm mt-1 drop-shadow">Agricultural supply-chain intelligence</p>
     </div>
 
-    <div class="card p-6 shadow-xl">
+    <div class="card p-6 shadow-2xl" style="background: #ffffff; backdrop-filter: none;">
       <mat-tab-group [(selectedIndex)]="tab" mat-stretch-tabs animationDuration="150ms">
         <mat-tab label="Sign in"></mat-tab>
         <mat-tab label="Sign up"></mat-tab>

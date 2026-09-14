@@ -44,7 +44,7 @@ public class RoutingOptimizer(AgriChainDbContext db)
         return R * c;
     }
 
-    public async Task<Dictionary<string, object?>> OptimizeShipmentRouteAsync(string commodity, decimal quantity)
+    public async Task<List<Dictionary<string, object>>> OptimizeShipmentRouteAsync(string commodity, decimal quantity)
     {
         var markets = await db.MarketPrices
             .Where(m => m.Commodity == commodity)
@@ -53,7 +53,7 @@ public class RoutingOptimizer(AgriChainDbContext db)
             .ToListAsync();
 
         if (markets.Count == 0)
-            return new() { ["found"] = false, ["message"] = $"No market price data found for '{commodity}'." };
+            return [];
 
         var spoilageRate = SpoilageRateFor(commodity);
         var qty = (double)quantity;
@@ -86,25 +86,17 @@ public class RoutingOptimizer(AgriChainDbContext db)
         var recommendations = scored.Select(s => new Dictionary<string, object>
         {
             ["market"] = s.Market,
-            ["price_per_unit"] = s.Price,
-            ["distance_km"] = s.DistanceKm,
-            ["estimated_transit_hours"] = s.TransitHours,
-            ["estimated_spoilage_loss_pct"] = s.SpoilageLossPct,
-            ["estimated_transport_cost"] = s.TransportCost,
-            ["net_expected_value"] = s.NetScore,
+            ["price"] = s.Price,
+            ["distanceKm"] = s.DistanceKm,
+            ["transitTimeHours"] = s.TransitHours,
+            ["spoilageRisk"] = s.SpoilageLossPct >= 5 ? "High" : s.SpoilageLossPct >= 1.5 ? "Medium" : "Low",
+            ["netScore"] = s.NetScore,
             ["reasoning"] =
                 $"At ₹{s.Price}/unit, {s.DistanceKm}km away (~{s.TransitHours}h transit), " +
                 $"estimated spoilage loss {s.SpoilageLossPct}%, transport cost ₹{s.TransportCost}. " +
                 $"Net expected value for {qty} units: ₹{s.NetScore}.",
         }).ToList();
 
-        return new()
-        {
-            ["found"] = true,
-            ["commodity"] = commodity,
-            ["quantity"] = qty,
-            ["spoilage_rate_per_hour"] = spoilageRate,
-            ["top_recommendations"] = recommendations,
-        };
+        return recommendations;
     }
 }

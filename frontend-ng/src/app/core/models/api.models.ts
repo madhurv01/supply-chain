@@ -39,13 +39,14 @@ export interface FarmPlot {
   id?: string | number;
   plotId: string;
   commodity: string;
-  quantity: number;
+  quantityPlanted: number;
   datePlanted: string;
   expectedHarvestDate: string;
   status?: 'GROWING' | 'HARVESTED';
 }
 
 export interface InventoryItem {
+  id?: string | number;
   commodity: string;
   quantity: number;
   unit: string;
@@ -57,12 +58,15 @@ export interface Shipment {
   commodity: string;
   quantity: number;
   destinationMarket: string;
+  originLat?: number;
+  originLon?: number;
   currentLat: number;
   currentLon: number;
   destinationLat: number;
   destinationLon: number;
   progress: number;
   status: string;
+  createdAt?: string;
 }
 
 export interface RouteRecommendation {
@@ -81,8 +85,9 @@ export interface Sale {
   commodity: string;
   quantity: number;
   pricePerUnit: number;
+  totalRevenue?: number;
   market: string;
-  createdAt?: string;
+  soldAt?: string;
 }
 
 export interface FinanceSummary {
