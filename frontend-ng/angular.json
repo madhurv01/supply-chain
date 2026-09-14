@@ -35,7 +35,7 @@
               "src/styles.css"
             ],
             "scripts": [],
-            "allowedCommonJsDependencies": ["leaflet", "qrcode"]
+            "allowedCommonJsDependencies": ["leaflet", "leaflet.markercluster", "qrcode"]
           },
           "configurations": {
             "production": {

@@ -7,7 +7,7 @@
   <div class="card p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
     <div class="flex flex-col gap-3">
       <div
-        class="h-64 rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden relative cursor-pointer"
+        class="h-64 rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden relative cursor-pointer transition-colors"
         [class.border-accent-emerald]="dragging()"
         [class.border-surface-border]="!dragging()"
         (drop)="onDrop($event)"
@@ -17,39 +17,99 @@
       >
         @if (previewUrl()) {
           <img [src]="previewUrl()" alt="Preview" class="w-full h-full object-cover" />
+          <button
+            type="button"
+            class="absolute top-2 right-2 bg-white/90 hover:bg-white text-slate-600 rounded-full w-7 h-7 flex items-center justify-center text-sm shadow"
+            (click)="$event.stopPropagation(); clearFile()"
+            aria-label="Remove photo"
+          >
+            ✕
+          </button>
         } @else {
-          <p class="text-sm text-slate-500 text-center px-4">Drag & drop a crop photo here, or click to choose one</p>
+          <p class="text-sm text-slate-500 text-center px-4">Drag &amp; drop a crop photo here, or click to choose one<br /><span class="text-xs text-slate-400">JPG, PNG or WEBP — max 8MB</span></p>
         }
       </div>
-      <input #fileInput type="file" accept="image/*" class="hidden" (change)="onFileSelected($event)" />
+      <input #fileInput type="file" accept="image/jpeg,image/png,image/webp" class="hidden" (change)="onFileSelected($event)" />
+
+      @if (fileError()) {
+        <p class="text-xs text-red-600">{{ fileError() }}</p>
+      }
+      @if (previewUrl() && fileName) {
+        <p class="text-xs text-slate-500 truncate">{{ fileName }}</p>
+      }
 
       <mat-form-field appearance="outline">
         <mat-label>Commodity</mat-label>
-        <input matInput name="commodity" [(ngModel)]="commodity" />
+        <mat-select [(ngModel)]="commodity">
+          @for (c of commodities(); track c) {
+            <mat-option [value]="c">{{ c }}</mat-option>
+          }
+        </mat-select>
       </mat-form-field>
 
       <button mat-flat-button color="primary" class="!rounded-lg !h-11" [disabled]="analyzing()" (click)="analyze()">
-        {{ analyzing() ? 'Analyzing…' : 'Analyze' }}
+        @if (analyzing()) {
+          <span class="flex items-center justify-center gap-2">
+            <span class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+            Analyzing photo… this can take up to 30s
+          </span>
+        } @else {
+          Analyze
+        }
       </button>
     </div>
 
     <div class="flex items-center justify-center">
-      @if (result(); as r) {
+      @if (analyzing()) {
+        <div class="flex flex-col items-center gap-3 text-slate-500">
+          <span class="inline-block w-8 h-8 border-4 border-slate-200 border-t-accent-emerald rounded-full animate-spin"></span>
+          <p class="text-sm">Running AI vision analysis…</p>
+        </div>
+      } @else if (providerError()) {
+        <div class="card p-6 w-full flex flex-col gap-3 border-2 border-amber-300 bg-amber-50">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">⚠️</span>
+            <p class="font-semibold text-amber-800">AI vision model unavailable</p>
+          </div>
+          <p class="text-sm text-amber-800 leading-relaxed">
+            The AI vision model is not currently available due to a provider configuration issue on the connected account.
+            Crop grading will work automatically once this is resolved — no action is needed on your end other than trying again later.
+          </p>
+          <details class="text-xs text-amber-700">
+            <summary class="cursor-pointer select-none">Technical details</summary>
+            <p class="mt-1 break-words">{{ providerError() }}</p>
+          </details>
+        </div>
+      } @else if (genericError()) {
+        <div class="card p-6 w-full flex flex-col gap-2 border-2 border-red-200 bg-red-50">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">✕</span>
+            <p class="font-semibold text-red-700">Grading failed</p>
+          </div>
+          <p class="text-sm text-red-700">{{ genericError() }}</p>
+        </div>
+      } @else if (result()) {
+        @let r = result()!;
         <div class="card p-6 w-full flex flex-col items-center gap-3">
           <p class="text-6xl font-bold" [class]="gradeClass(r.grade)">{{ r.grade }}</p>
           <p class="text-sm text-slate-600">Confidence: {{ (r.confidence * 100) | number:'1.0-0' }}%</p>
+          <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+            <div class="h-full rounded-full bg-accent-emerald" [style.width.%]="r.confidence * 100"></div>
+          </div>
           @if (r.defects && r.defects.length) {
             <div class="w-full">
-              <p class="text-xs text-slate-600 mb-1">Defects</p>
-              <ul class="text-sm text-slate-700 list-disc list-inside">
+              <p class="text-xs text-slate-600 mb-1.5">Defects found</p>
+              <div class="flex flex-wrap gap-1.5">
                 @for (d of r.defects; track d) {
-                  <li>{{ d }}</li>
+                  <span class="text-xs px-2 py-1 rounded-full bg-red-50 text-red-700 border border-red-100">{{ d }}</span>
                 }
-              </ul>
+              </div>
             </div>
+          } @else {
+            <p class="text-xs px-2 py-1 rounded-full bg-accent-dim accent-text">No defects detected</p>
           }
           @if (r.notes) {
-            <p class="text-sm text-slate-600 text-center">{{ r.notes }}</p>
+            <p class="text-sm text-slate-600 text-center leading-relaxed">{{ r.notes }}</p>
           }
         </div>
       } @else {
