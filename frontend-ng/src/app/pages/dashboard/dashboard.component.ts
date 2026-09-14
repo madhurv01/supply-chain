@@ -268,6 +268,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         this.pendingShipments = shipments.filter((s) => s.status !== 'DELIVERED');
         this.renderMapMarkers();
         this.loadingMap.set(false);
+        setTimeout(() => this.map?.invalidateSize(), 0);
       });
   }
 
@@ -276,10 +277,12 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!el) {
       return;
     }
-    this.map = L.map('dashboard-mini-map', { zoomControl: false, attributionControl: false, dragging: true, scrollWheelZoom: false }).setView([22.9734, 78.6569], 4);
+    this.map = L.map('dashboard-mini-map', { zoomControl: false, attributionControl: false, dragging: true, scrollWheelZoom: false }).setView([22.9734, 78.6569], 4.3);
+    this.map.setMaxBounds([[4, 60], [40, 100]]);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(this.map);
     this.markersLayer = L.layerGroup().addTo(this.map);
     this.renderMapMarkers();
+    setTimeout(() => this.map?.invalidateSize(), 0);
   }
 
   private renderMapMarkers(): void {
