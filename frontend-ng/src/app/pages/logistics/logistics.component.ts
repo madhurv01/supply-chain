@@ -209,11 +209,14 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private initOverviewMap(): void {
-    this.overviewMap = L.map('logistics-overview-map', { zoomControl: true, attributionControl: true, minZoom: 2 }).setView([20, 60], 3);
+    this.overviewMap = L.map('logistics-overview-map', { zoomControl: true, attributionControl: true, minZoom: 4 }).setView([22.5, 80], 4.6);
+    this.overviewMap.setMaxBounds([[4, 60], [40, 100]]);
+    (this.overviewMap as any).options.maxBoundsViscosity = 1.0;
     addBaseLayers(this.overviewMap);
     this.overviewCluster = (L as any).markerClusterGroup({ maxClusterRadius: 50, spiderfyOnMaxZoom: true, showCoverageOnHover: false });
     this.overviewCluster!.addTo(this.overviewMap);
     this.renderOverviewMarkers();
+    setTimeout(() => this.overviewMap?.invalidateSize(), 0);
   }
 
   private renderOverviewMarkers(): void {
@@ -306,7 +309,7 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
     this.expandedShipmentId.set(s.id);
-    setTimeout(() => this.initFocusedMap(s), 0);
+    setTimeout(() => this.initFocusedMap(s), 320);
   }
 
   private collapseFocused(): void {
@@ -374,6 +377,7 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.focused = { id: s.id, map, marker, routeLine, currentLatLng };
+    setTimeout(() => map.invalidateSize(), 50);
   }
 
   private updateFocusedMap(): void {
