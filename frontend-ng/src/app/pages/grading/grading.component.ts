@@ -82,11 +82,11 @@ export class GradingComponent {
       case 'A':
         return 'text-accent-emerald';
       case 'B':
-        return 'text-amber-400';
+        return 'text-amber-600';
       case 'C':
-        return 'text-red-400';
+        return 'text-red-600';
       default:
-        return 'text-slate-300';
+        return 'text-slate-400';
     }
   }
 }

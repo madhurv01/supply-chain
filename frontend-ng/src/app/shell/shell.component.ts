@@ -29,7 +29,7 @@ export class ShellComponent {
     { label: 'Crop Grading', path: '/grading', icon: 'photo_camera' },
   ];
 
-  readonly darkMode = signal(true);
+  readonly darkMode = signal(false);
   readonly sidebarOpen = signal(false);
 
   constructor(private auth: AuthService, private router: Router) {}

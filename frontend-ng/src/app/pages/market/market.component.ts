@@ -29,14 +29,14 @@ export class MarketComponent implements OnInit {
   mode: Mode = 'best_market_for_commodity';
   value = '';
 
-  readonly chartData = signal<ChartData<'bar'>>({ labels: [], datasets: [{ data: [], label: 'Value', backgroundColor: '#4ade80' }] });
+  readonly chartData = signal<ChartData<'bar'>>({ labels: [], datasets: [{ data: [], label: 'Value', backgroundColor: '#059669' }] });
   readonly chartOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: {
-      x: { ticks: { color: '#94a3b8' }, grid: { color: '#1f2a24' } },
-      y: { ticks: { color: '#94a3b8' }, grid: { color: '#1f2a24' } },
+      x: { ticks: { color: '#475569' }, grid: { color: '#e5e7eb' } },
+      y: { ticks: { color: '#475569' }, grid: { color: '#e5e7eb' } },
     },
   };
 
@@ -74,7 +74,7 @@ export class MarketComponent implements OnInit {
         this.result.set(res);
         this.chartData.set({
           labels: (res?.chartData ?? []).map((d) => d.label),
-          datasets: [{ data: (res?.chartData ?? []).map((d) => d.value), label: 'Value', backgroundColor: '#4ade80' }],
+          datasets: [{ data: (res?.chartData ?? []).map((d) => d.value), label: 'Value', backgroundColor: '#059669' }],
         });
         this.loading.set(false);
         this.loadHistory();

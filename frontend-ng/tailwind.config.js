@@ -6,17 +6,22 @@ module.exports = {
     extend: {
       colors: {
         surface: {
-          0: '#0a0e0d',
-          1: '#0f1512',
-          2: '#151c18',
-          3: '#1c2520',
-          border: '#26312b',
+          0: '#f5f6f8',
+          1: '#ffffff',
+          2: '#f1f3f6',
+          3: '#e7eaef',
+          border: '#e3e6ec',
         },
         accent: {
-          DEFAULT: '#4ade80',
-          lime: '#a3e635',
-          emerald: '#10b981',
-          dim: '#1a2e22',
+          DEFAULT: '#059669',
+          lime: '#0d9488',
+          emerald: '#047857',
+          dim: '#ecfdf5',
+        },
+        ink: {
+          primary: '#0f172a',
+          secondary: '#4b5563',
+          tertiary: '#6b7280',
         },
       },
       fontFamily: {

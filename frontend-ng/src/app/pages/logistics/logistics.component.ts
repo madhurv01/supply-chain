@@ -69,12 +69,12 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     this.markersLayer.clearLayers();
     const truckIcon = L.divIcon({
       className: '',
-      html: '<div style="background:#4ade80;width:12px;height:12px;border-radius:50%;border:2px solid #0a0e0d;"></div>',
+      html: '<div style="background:#059669;width:12px;height:12px;border-radius:50%;border:2px solid #ffffff;"></div>',
       iconSize: [12, 12],
     });
     const destIcon = L.divIcon({
       className: '',
-      html: '<div style="background:#f59e0b;width:10px;height:10px;border-radius:2px;border:2px solid #0a0e0d;"></div>',
+      html: '<div style="background:#f59e0b;width:10px;height:10px;border-radius:2px;border:2px solid #ffffff;"></div>',
       iconSize: [10, 10],
     });
     for (const s of this.shipments()) {

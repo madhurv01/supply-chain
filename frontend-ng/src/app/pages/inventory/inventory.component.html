@@ -1,16 +1,16 @@
 <div class="flex flex-col gap-6">
   <div>
-    <h1 class="text-xl font-semibold text-white">Inventory</h1>
-    <p class="text-sm text-slate-400">Stock on hand across all commodities</p>
+    <h1 class="text-xl font-semibold text-slate-900">Inventory</h1>
+    <p class="text-sm text-slate-600">Stock on hand across all commodities</p>
   </div>
 
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div class="stat-card">
-      <p class="text-xs text-slate-400">Total Quantity</p>
-      <p class="text-2xl font-semibold text-white mt-1">{{ totalQuantity | number:'1.0-0' }}</p>
+      <p class="text-xs text-slate-600">Total Quantity</p>
+      <p class="text-2xl font-semibold text-slate-900 mt-1">{{ totalQuantity | number:'1.0-0' }}</p>
     </div>
     <div class="stat-card">
-      <p class="text-xs text-slate-400">Distinct Commodities</p>
+      <p class="text-xs text-slate-600">Distinct Commodities</p>
       <p class="text-2xl font-semibold accent-text mt-1">{{ distinctCommodities }}</p>
     </div>
   </div>

@@ -27,17 +27,17 @@ export class DashboardComponent implements OnInit {
   readonly chartOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: '#cbd5e1' } } },
+    plugins: { legend: { labels: { color: '#334155' } } },
     scales: {
-      x: { ticks: { color: '#94a3b8' }, grid: { color: '#1f2a24' } },
-      y: { ticks: { color: '#94a3b8' }, grid: { color: '#1f2a24' } },
+      x: { ticks: { color: '#475569' }, grid: { color: '#e5e7eb' } },
+      y: { ticks: { color: '#475569' }, grid: { color: '#e5e7eb' } },
     },
   };
 
   readonly doughnutOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: '#cbd5e1' } } },
+    plugins: { legend: { labels: { color: '#334155' } } },
   };
 
   constructor(private api: ApiService) {}
@@ -55,7 +55,7 @@ export class DashboardComponent implements OnInit {
         this.totalRevenue.set(summary?.totalRevenue ?? 0);
         this.revenueChartData.set({
           labels: (summary?.byCommodity ?? []).map((c) => c.commodity),
-          datasets: [{ data: (summary?.byCommodity ?? []).map((c) => c.revenue), label: 'Revenue', backgroundColor: '#4ade80' }],
+          datasets: [{ data: (summary?.byCommodity ?? []).map((c) => c.revenue), label: 'Revenue', backgroundColor: '#059669' }],
         });
         this.growingPlots.set((plots ?? []).length);
         this.loading.set(false);

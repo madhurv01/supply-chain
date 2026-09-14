@@ -30,14 +30,14 @@ export class FinanceComponent implements OnInit {
   selectedShipment: Shipment | null = null;
   pricePerUnit: number | null = null;
 
-  readonly chartData = signal<ChartData<'bar'>>({ labels: [], datasets: [{ data: [], label: 'Revenue', backgroundColor: '#a3e635' }] });
+  readonly chartData = signal<ChartData<'bar'>>({ labels: [], datasets: [{ data: [], label: 'Revenue', backgroundColor: '#0d9488' }] });
   readonly chartOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: {
-      x: { ticks: { color: '#94a3b8' }, grid: { color: '#1f2a24' } },
-      y: { ticks: { color: '#94a3b8' }, grid: { color: '#1f2a24' } },
+      x: { ticks: { color: '#475569' }, grid: { color: '#e5e7eb' } },
+      y: { ticks: { color: '#475569' }, grid: { color: '#e5e7eb' } },
     },
   };
 
@@ -61,7 +61,7 @@ export class FinanceComponent implements OnInit {
         this.summary.set(res);
         this.chartData.set({
           labels: (res?.byCommodity ?? []).map((c) => c.commodity),
-          datasets: [{ data: (res?.byCommodity ?? []).map((c) => c.revenue), label: 'Revenue', backgroundColor: '#a3e635' }],
+          datasets: [{ data: (res?.byCommodity ?? []).map((c) => c.revenue), label: 'Revenue', backgroundColor: '#0d9488' }],
         });
       },
       error: () => this.summary.set(null),

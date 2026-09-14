@@ -1,7 +1,7 @@
 <div class="flex flex-col gap-6">
   <div>
-    <h1 class="text-xl font-semibold text-white">Crop Grading</h1>
-    <p class="text-sm text-slate-400">Upload a photo to get an AI quality grade</p>
+    <h1 class="text-xl font-semibold text-slate-900">Crop Grading</h1>
+    <p class="text-sm text-slate-600">Upload a photo to get an AI quality grade</p>
   </div>
 
   <div class="card p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -37,11 +37,11 @@
       @if (result(); as r) {
         <div class="card p-6 w-full flex flex-col items-center gap-3">
           <p class="text-6xl font-bold" [class]="gradeClass(r.grade)">{{ r.grade }}</p>
-          <p class="text-sm text-slate-400">Confidence: {{ (r.confidence * 100) | number:'1.0-0' }}%</p>
+          <p class="text-sm text-slate-600">Confidence: {{ (r.confidence * 100) | number:'1.0-0' }}%</p>
           @if (r.defects && r.defects.length) {
             <div class="w-full">
-              <p class="text-xs text-slate-400 mb-1">Defects</p>
-              <ul class="text-sm text-slate-300 list-disc list-inside">
+              <p class="text-xs text-slate-600 mb-1">Defects</p>
+              <ul class="text-sm text-slate-700 list-disc list-inside">
                 @for (d of r.defects; track d) {
                   <li>{{ d }}</li>
                 }
@@ -49,7 +49,7 @@
             </div>
           }
           @if (r.notes) {
-            <p class="text-sm text-slate-400 text-center">{{ r.notes }}</p>
+            <p class="text-sm text-slate-600 text-center">{{ r.notes }}</p>
           }
         </div>
       } @else {
