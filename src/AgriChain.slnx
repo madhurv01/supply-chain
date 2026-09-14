@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="AgriChain.Agent/AgriChain.Agent.csproj" />
+  <Project Path="AgriChain.Api/AgriChain.Api.csproj" />
+  <Project Path="AgriChain.Domain/AgriChain.Domain.csproj" />
+  <Project Path="AgriChain.Infrastructure/AgriChain.Infrastructure.csproj" />
+</Solution>

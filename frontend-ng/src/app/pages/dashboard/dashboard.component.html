@@ -1,0 +1,44 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h1 class="text-xl font-semibold text-white">Dashboard</h1>
+    <p class="text-sm text-slate-400">Overview of your supply chain</p>
+  </div>
+
+  @if (error()) {
+    <div class="card p-3 text-amber-400 text-sm border-amber-900">{{ error() }}</div>
+  }
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="stat-card">
+      <p class="text-xs text-slate-400">Inventory Total</p>
+      <p class="text-2xl font-semibold text-white mt-1">{{ totalInventory() | number:'1.0-0' }}</p>
+    </div>
+    <div class="stat-card">
+      <p class="text-xs text-slate-400">Active Shipments</p>
+      <p class="text-2xl font-semibold accent-text mt-1">{{ activeShipments() }}</p>
+    </div>
+    <div class="stat-card">
+      <p class="text-xs text-slate-400">Revenue</p>
+      <p class="text-2xl font-semibold text-white mt-1">₹{{ totalRevenue() | number:'1.0-0' }}</p>
+    </div>
+    <div class="stat-card">
+      <p class="text-xs text-slate-400">Growing Plots</p>
+      <p class="text-2xl font-semibold accent-text mt-1">{{ growingPlots() }}</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="card p-4 h-80">
+      <p class="text-sm font-medium text-slate-300 mb-2">Inventory Mix</p>
+      <div class="h-64">
+        <canvas baseChart [data]="inventoryChartData()" [options]="doughnutOptions" type="doughnut"></canvas>
+      </div>
+    </div>
+    <div class="card p-4 h-80">
+      <p class="text-sm font-medium text-slate-300 mb-2">Revenue by Commodity</p>
+      <div class="h-64">
+        <canvas baseChart [data]="revenueChartData()" [options]="chartOptions" type="bar"></canvas>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,48 @@
+<div class="flex h-screen bg-surface-0 text-slate-100 overflow-hidden">
+  <aside
+    class="w-64 shrink-0 border-r border-surface-border bg-surface-1 md:flex flex-col fixed md:static inset-y-0 left-0 z-30 transition-transform md:translate-x-0"
+    [class.flex]="sidebarOpen()"
+    [class.hidden]="!sidebarOpen()"
+  >
+    <div class="h-16 flex items-center gap-2 px-5 border-b border-surface-border">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-emerald to-accent-lime flex items-center justify-center font-bold text-surface-0">A</div>
+      <span class="font-semibold tracking-tight text-lg">Agri-Chain OS</span>
+    </div>
+    <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+      @for (item of navItems; track item.path) {
+        <a
+          [routerLink]="item.path"
+          routerLinkActive="bg-accent-dim text-accent-lime"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-surface-2 hover:text-white transition-colors"
+        >
+          <mat-icon class="!w-5 !h-5 !text-[20px]">{{ item.icon }}</mat-icon>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+    <div class="p-3 border-t border-surface-border text-xs text-slate-500">
+      Agri-Chain OS &copy; {{ 2026 }}
+    </div>
+  </aside>
+
+  <div class="flex-1 flex flex-col min-w-0">
+    <header class="h-16 shrink-0 border-b border-surface-border bg-surface-1/80 backdrop-blur flex items-center justify-between px-4 md:px-6">
+      <button class="md:hidden p-2 rounded-lg hover:bg-surface-2" (click)="toggleSidebar()">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <div class="hidden md:block"></div>
+      <div class="flex items-center gap-3">
+        <button class="p-2 rounded-lg hover:bg-surface-2 text-slate-300" (click)="toggleTheme()" title="Toggle theme">
+          <mat-icon>{{ darkMode() ? 'dark_mode' : 'light_mode' }}</mat-icon>
+        </button>
+        <span class="hidden sm:inline text-sm text-slate-400">{{ userEmail }}</span>
+        <button class="p-2 rounded-lg hover:bg-surface-2 text-slate-300" (click)="logout()" title="Logout">
+          <mat-icon>logout</mat-icon>
+        </button>
+      </div>
+    </header>
+    <main class="flex-1 overflow-y-auto p-4 md:p-6">
+      <router-outlet />
+    </main>
+  </div>
+</div>

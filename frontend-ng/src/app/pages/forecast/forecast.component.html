@@ -1,0 +1,62 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h1 class="text-xl font-semibold text-white">Forecast</h1>
+    <p class="text-sm text-slate-400">AI-generated price forecasts by commodity</p>
+  </div>
+
+  <div class="card p-4 flex flex-col sm:flex-row gap-3 sm:items-end">
+    <mat-form-field appearance="outline" class="sm:w-64">
+      <mat-label>Commodity</mat-label>
+      <mat-select [(ngModel)]="commodity">
+        @for (c of commodities(); track c) {
+          <mat-option [value]="c">{{ c }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="sm:w-64">
+      <mat-label>State (optional)</mat-label>
+      <input matInput [(ngModel)]="state" />
+    </mat-form-field>
+    <button mat-flat-button color="primary" class="!h-11 !rounded-lg sm:mb-4" [disabled]="loading() || !commodity" (click)="generate()">
+      {{ loading() ? 'Generating…' : 'Generate Forecast' }}
+    </button>
+  </div>
+
+  @if (error()) {
+    <div class="card p-3 text-amber-400 text-sm border-amber-900">{{ error() }}</div>
+  }
+
+  @if (result(); as r) {
+    <div class="card p-4">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        @for (e of entries(r); track e.key) {
+          <div class="stat-card">
+            <p class="text-xs text-slate-400">{{ e.key }}</p>
+            <p class="text-lg font-semibold text-white mt-1">{{ e.value }}</p>
+          </div>
+        }
+      </div>
+      @if (r.narrative || r.summary) {
+        <p class="text-sm text-slate-300 mt-4 leading-relaxed">{{ r.narrative || r.summary }}</p>
+      }
+    </div>
+  }
+
+  <div class="card p-4">
+    <p class="text-sm font-medium text-slate-300 mb-3">History</p>
+    @if (history().length === 0) {
+      <p class="text-sm text-slate-500">No forecast history yet.</p>
+    }
+    <div class="space-y-2">
+      @for (h of history(); track h.id) {
+        <div class="border border-surface-border rounded-lg p-3">
+          <div class="flex justify-between text-xs text-slate-500">
+            <span>{{ h.query }}</span>
+            <span>{{ h.createdAt | date:'short' }}</span>
+          </div>
+          <p class="text-sm text-slate-300 mt-1">{{ h.report }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</div>

@@ -1,0 +1,60 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h1 class="text-xl font-semibold text-white">Crop Grading</h1>
+    <p class="text-sm text-slate-400">Upload a photo to get an AI quality grade</p>
+  </div>
+
+  <div class="card p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="flex flex-col gap-3">
+      <div
+        class="h-64 rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden relative cursor-pointer"
+        [class.border-accent-emerald]="dragging()"
+        [class.border-surface-border]="!dragging()"
+        (drop)="onDrop($event)"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave()"
+        (click)="fileInput.click()"
+      >
+        @if (previewUrl()) {
+          <img [src]="previewUrl()" alt="Preview" class="w-full h-full object-cover" />
+        } @else {
+          <p class="text-sm text-slate-500 text-center px-4">Drag & drop a crop photo here, or click to choose one</p>
+        }
+      </div>
+      <input #fileInput type="file" accept="image/*" class="hidden" (change)="onFileSelected($event)" />
+
+      <mat-form-field appearance="outline">
+        <mat-label>Commodity</mat-label>
+        <input matInput name="commodity" [(ngModel)]="commodity" />
+      </mat-form-field>
+
+      <button mat-flat-button color="primary" class="!rounded-lg !h-11" [disabled]="analyzing()" (click)="analyze()">
+        {{ analyzing() ? 'Analyzing…' : 'Analyze' }}
+      </button>
+    </div>
+
+    <div class="flex items-center justify-center">
+      @if (result(); as r) {
+        <div class="card p-6 w-full flex flex-col items-center gap-3">
+          <p class="text-6xl font-bold" [class]="gradeClass(r.grade)">{{ r.grade }}</p>
+          <p class="text-sm text-slate-400">Confidence: {{ (r.confidence * 100) | number:'1.0-0' }}%</p>
+          @if (r.defects && r.defects.length) {
+            <div class="w-full">
+              <p class="text-xs text-slate-400 mb-1">Defects</p>
+              <ul class="text-sm text-slate-300 list-disc list-inside">
+                @for (d of r.defects; track d) {
+                  <li>{{ d }}</li>
+                }
+              </ul>
+            </div>
+          }
+          @if (r.notes) {
+            <p class="text-sm text-slate-400 text-center">{{ r.notes }}</p>
+          }
+        </div>
+      } @else {
+        <p class="text-sm text-slate-500 text-center px-6">Results will appear here after analysis</p>
+      }
+    </div>
+  </div>
+</div>

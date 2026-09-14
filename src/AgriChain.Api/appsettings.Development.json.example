@@ -1,0 +1,18 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=aws-0-ap-south-1.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.tihxnbwgsoepnqdaotzk;Password=REPLACE_ME;SSL Mode=Require;Trust Server Certificate=true"
+  },
+  "Jwt": {
+    "Secret": "dev-only-secret-fXSHNc0JjKU7KPr9g6eIWE64guwykpmoTsL6ff2WMdEaV7RTujpHBM-REPLACE-FOR-PROD",
+    "Issuer": "AgriChainOS"
+  },
+  "Groq": {
+    "ApiKey": ""
+  }
+}

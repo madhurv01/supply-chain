@@ -1,0 +1,67 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h1 class="text-xl font-semibold text-white">Market Analysis</h1>
+    <p class="text-sm text-slate-400">Find the best market or commodity match</p>
+  </div>
+
+  <div class="card p-4 flex flex-col gap-3">
+    <mat-button-toggle-group [(ngModel)]="mode" (change)="onModeChange()" class="!w-fit">
+      <mat-button-toggle value="best_market_for_commodity">Best market for commodity</mat-button-toggle>
+      <mat-button-toggle value="best_commodity_for_market">Best commodity for market</mat-button-toggle>
+    </mat-button-toggle-group>
+
+    <div class="flex flex-col sm:flex-row gap-3 sm:items-end">
+      <mat-form-field appearance="outline" class="sm:w-64">
+        <mat-label>{{ mode === 'best_market_for_commodity' ? 'Commodity' : 'Market' }}</mat-label>
+        <mat-select [(ngModel)]="value">
+          @for (o of options; track o) {
+            <mat-option [value]="o">{{ o }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <button mat-flat-button color="primary" class="!h-11 !rounded-lg sm:mb-4" [disabled]="loading() || !value" (click)="analyze()">
+        {{ loading() ? 'Analyzing…' : 'Analyze' }}
+      </button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="card p-3 text-amber-400 text-sm border-amber-900">{{ error() }}</div>
+  }
+
+  @if (result(); as r) {
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="stat-card">
+        <p class="text-xs text-slate-400">Top Recommendation</p>
+        <p class="text-lg font-semibold text-white mt-1">{{ r.topRecommendation }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="text-xs text-slate-400">Top Price</p>
+        <p class="text-lg font-semibold accent-text mt-1">₹{{ r.topPrice }}</p>
+      </div>
+    </div>
+    <div class="card p-4 h-80">
+      <div class="h-64">
+        <canvas baseChart [data]="chartData()" [options]="chartOptions" type="bar"></canvas>
+      </div>
+    </div>
+  }
+
+  <div class="card p-4">
+    <p class="text-sm font-medium text-slate-300 mb-3">History</p>
+    @if (history().length === 0) {
+      <p class="text-sm text-slate-500">No analysis history yet.</p>
+    }
+    <div class="space-y-2">
+      @for (h of history(); track h.id) {
+        <div class="border border-surface-border rounded-lg p-3">
+          <div class="flex justify-between text-xs text-slate-500">
+            <span>{{ h.query }}</span>
+            <span>{{ h.createdAt | date:'short' }}</span>
+          </div>
+          <p class="text-sm text-slate-300 mt-1">{{ h.report }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</div>

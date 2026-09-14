@@ -1,0 +1,92 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h1 class="text-xl font-semibold text-white">Finance</h1>
+    <p class="text-sm text-slate-400">Log sales and track revenue</p>
+  </div>
+
+  @if (summary(); as s) {
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="stat-card">
+        <p class="text-xs text-slate-400">Total Revenue</p>
+        <p class="text-2xl font-semibold text-white mt-1">₹{{ s.totalRevenue | number:'1.0-0' }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="text-xs text-slate-400">Total Sales</p>
+        <p class="text-2xl font-semibold accent-text mt-1">{{ s.totalSales }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="text-xs text-slate-400">Avg Sale Value</p>
+        <p class="text-2xl font-semibold text-white mt-1">₹{{ s.avgSaleValue | number:'1.0-0' }}</p>
+      </div>
+    </div>
+  }
+
+  <div class="card p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div>
+      <p class="text-sm font-medium text-slate-300 mb-3">Log a Sale</p>
+      <div class="flex flex-col gap-3">
+        <mat-form-field appearance="outline">
+          <mat-label>Arrived Shipment</mat-label>
+          <mat-select [(ngModel)]="selectedShipment" (selectionChange)="onShipmentChange()">
+            @for (sh of arrivedShipments(); track sh.id) {
+              <mat-option [value]="sh">{{ sh.commodity }} — {{ sh.quantity }}kg — {{ sh.destinationMarket }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Price per unit</mat-label>
+          <input matInput type="number" [(ngModel)]="pricePerUnit" (ngModelChange)="onPriceChange()" />
+        </mat-form-field>
+        <button mat-flat-button color="primary" class="!rounded-lg !h-11" [disabled]="submitting()" (click)="logSale()">
+          {{ submitting() ? 'Logging…' : 'Log Sale' }}
+        </button>
+      </div>
+    </div>
+    <div class="flex flex-col items-center justify-center gap-2">
+      <p class="text-sm font-medium text-slate-300 self-start">UPI Payment QR</p>
+      @if (qrDataUrl()) {
+        <img [src]="qrDataUrl()" alt="UPI QR code" class="rounded-lg bg-white p-2" />
+      } @else {
+        <div class="w-48 h-48 rounded-lg border border-dashed border-surface-border flex items-center justify-center text-xs text-slate-500 text-center px-4">
+          Select a shipment and price to generate a payment QR
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="card p-4 h-80">
+    <p class="text-sm font-medium text-slate-300 mb-2">Revenue by Commodity</p>
+    <div class="h-64">
+      <canvas baseChart [data]="chartData()" [options]="chartOptions" type="bar"></canvas>
+    </div>
+  </div>
+
+  <div class="card p-2 overflow-x-auto">
+    <p class="text-sm font-medium text-slate-300 px-2 pt-2">Recent Sales</p>
+    @if (sales().length === 0) {
+      <p class="text-sm text-slate-500 p-4">No sales logged yet.</p>
+    }
+    @if (sales().length > 0) {
+      <table mat-table [dataSource]="sales()" class="w-full !bg-transparent">
+        <ng-container matColumnDef="commodity">
+          <th mat-header-cell *matHeaderCellDef>Commodity</th>
+          <td mat-cell *matCellDef="let row">{{ row.commodity }}</td>
+        </ng-container>
+        <ng-container matColumnDef="quantity">
+          <th mat-header-cell *matHeaderCellDef>Qty</th>
+          <td mat-cell *matCellDef="let row">{{ row.quantity }}</td>
+        </ng-container>
+        <ng-container matColumnDef="pricePerUnit">
+          <th mat-header-cell *matHeaderCellDef>Price/Unit</th>
+          <td mat-cell *matCellDef="let row">₹{{ row.pricePerUnit }}</td>
+        </ng-container>
+        <ng-container matColumnDef="market">
+          <th mat-header-cell *matHeaderCellDef>Market</th>
+          <td mat-cell *matCellDef="let row">{{ row.market }}</td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+    }
+  </div>
+</div>

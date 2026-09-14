@@ -6,129 +6,136 @@
 
 # Agri-Chain OS
 
-An agentic farm-to-market supply chain platform. Track crop plots from planting to harvest, manage warehouse inventory, dispatch and monitor shipments on a live map, collect payments via UPI QR codes, and run commodity price forecasts — either through dedicated dashboard pages or by asking the built-in **AI operations agent** to do it in plain language ("harvest plot A and ship 200kg of wheat to Pune").
+An agentic farm-to-market supply chain platform. Track crop plots from planting to harvest, manage warehouse inventory, dispatch and monitor shipments on a live map, collect payments via UPI QR codes, get real commodity price forecasts, and let an AI agent operate the whole thing on your behalf — including two genuinely computed AI features: a **harvest-to-market routing optimizer** (price vs. distance vs. spoilage risk, not a lookup) and **crop quality grading from photos** (a real vision-model call).
 
-Rebuilt from an earlier Streamlit prototype into a two-service web app: a FastAPI backend and a Next.js frontend, backed by a dedicated Supabase Postgres project.
+Built as a C# backend and an Angular frontend, with Supabase used strictly as the Postgres database (auth is handled in-house by ASP.NET Core Identity, not Supabase Auth).
 
 ## Features
 
-- **AI Agent** — conversational agent (Groq, tool-calling) that forecasts prices, manages farm plots/inventory, dispatches shipments, logs sales, and summarizes finances, chaining multiple actions from one instruction
-- **Forecast** — AI-generated 3-part price forecast (price outlook, market-risk, strategic opportunities)
+- **AI Agent** — conversational agent (Groq, tool-calling) covering forecasting, farm/inventory, logistics, finance, route optimization, and crop grading, chaining multiple actions from one instruction
+- **Route Optimizer** — ranks candidate markets for a harvest by real net-expected-value scoring (price × quantity, minus transport cost, minus spoilage loss over transit time) — not just "highest price"
+- **Crop Grading** — upload a produce photo, a vision model returns a grade (A/B/C), defects, and confidence
+- **Forecast** — AI-generated 3-part price forecast (outlook, market-risk, strategic opportunities)
 - **Market Analysis** — instant, non-AI: best market for a commodity, or best commodity for a market
 - **Farm Management** — log plantings, track growing plots, harvest into inventory
 - **Inventory** — live warehouse stock per commodity
-- **Logistics** — dispatch shipments, live map (react-leaflet) with simulated GPS progress
+- **Logistics** — dispatch shipments, live map (Leaflet) with simulated GPS progress
 - **Finance & Sales** — UPI QR payment generation, sale logging, revenue dashboard
+- **MCP server** — the agent's tools are also exposed over MCP (`/mcp`, HTTP/SSE), so Claude Desktop, Cursor, or any MCP client can operate the app directly
 
 ## Architecture
 
 ```
-Next.js (3000) ──REST + Bearer JWT──▶ FastAPI (8000) ──▶ Supabase Postgres
-      │                                     │                    ▲
-      └── Supabase JS (auth only) ──────────┘                    │
-                                             └── tool calls ──▶ Groq API
+Angular (4200) ──REST + Bearer JWT──▶ ASP.NET Core (5000) ──EF Core──▶ Supabase Postgres
+                                             │
+                                             └── Groq API (chat + vision)
+                                             └── MCP server (/mcp)
 ```
 
-- The frontend only uses Supabase for auth (sign up/in, session). All data goes through the backend.
-- The backend holds no privileged DB credentials — every request forwards the caller's own Supabase JWT, so Postgres Row Level Security is the real authorization boundary.
-- The AI agent and the manual dashboard pages share the same `backend/services/` layer, so agent actions stay consistent with the UI.
+- Auth is entirely in-house: ASP.NET Core Identity issues and validates its own JWTs. Supabase is used only as a Postgres database (via a direct connection string through its connection pooler), not for auth.
+- The AI agent, the route optimizer, crop grading, and the manual dashboard pages all share the same `AgriChain.Infrastructure/Services` layer, so agent actions stay consistent with the UI.
+- The same tool set the in-app agent uses is also exposed as an MCP server, so external MCP clients can drive the app.
 
 ## Tech stack
 
-**Backend**: FastAPI (Python 3.12), Supabase Python client, Groq SDK (`llama-3.3-70b-versatile`)
-**Frontend**: Next.js 14 (App Router, TypeScript), Tailwind + shadcn/ui, `@supabase/supabase-js` (auth only), recharts, react-leaflet, react-hook-form + zod, qrcode.react
-**Data**: dedicated Supabase Postgres project (`agri-chain-os`), RLS on every table, ~5,000 seeded rows
+**Backend**: ASP.NET Core 8/10 Minimal APIs (C#), EF Core + Npgsql (Supabase Postgres), ASP.NET Core Identity + JWT, Groq SDK-equivalent HTTP client (chat + vision), `ModelContextProtocol`/`ModelContextProtocol.AspNetCore` (MCP server)
+**Frontend**: Angular 18 (standalone components), Angular Material + Tailwind, `ng2-charts`/Chart.js, Leaflet, `qrcode`
+**Data**: Supabase Postgres project `agri-chain-os`, ~5,000 seeded rows
 
 ## Project structure
 
 ```
 supply-chain/
-├── backend/
-│   ├── main.py, config.py, auth.py, supabase_client.py
-│   ├── routers/     # agent, market, farm, inventory, logistics, finance, forecasts
-│   ├── services/     # business logic — shared by routers and the agent's tools
-│   └── agent/         # tools.py (schemas + dispatch), orchestrator.py (Groq loop)
-├── frontend/
-│   ├── app/login/, app/(dashboard)/  # agent, forecast, market, farm, inventory, logistics, finance
-│   ├── components/                    # sidebar, topbar, stat cards, map, shadcn/ui kit
-│   └── lib/api.ts, lib/supabase.ts
-├── scripts/seed_market_data.sql       # full ~17k-row price dataset + INSERT policy
+├── src/
+│   ├── AgriChain.Domain/          # entities (FarmPlot, InventoryItem, Shipment, Sale, MarketPrice, Forecast, AppUser, CropGrading)
+│   ├── AgriChain.Infrastructure/   # EF Core DbContext (mapped onto the existing tables), Services/*
+│   ├── AgriChain.Agent/             # GroqClient, AgentOrchestrator, RoutingOptimizer, CropGradingService, MCP tools
+│   └── AgriChain.Api/                # Program.cs, Endpoints/* (Auth, Market, Farm, Inventory, Logistics, Finance, Forecast, Agent, Grading)
+├── frontend-ng/
+│   └── src/app/
+│       ├── core/                       # auth service (JWT + signals), http interceptor, route guard
+│       ├── features/                    # login, dashboard, agent, forecast, market, farm, inventory, logistics, finance, grading
+│       └── shared/                       # sidebar/topbar layout, shared components
+├── scripts/seed_market_data.sql        # full ~17k-row price dataset + INSERT policy
 ├── agriculture.csv
 └── README.md
 ```
 
 ## Setup
 
-**Prerequisites**: Python 3.12+, Node.js 18+, a Supabase project (already provisioned), a free [Groq](https://console.groq.com/) API key (optional, for the AI agent).
+**Prerequisites**: .NET 8+ SDK, Node.js 18+ (Angular CLI installs via `npx`), a free [Groq](https://console.groq.com/) API key.
 
 ```powershell
 # Backend
-cd backend
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-copy .env.example .env   # fill in SUPABASE_URL, SUPABASE_ANON_KEY, GROQ_API_KEY
+cd src
+copy AgriChain.Api\appsettings.Development.json.example AgriChain.Api\appsettings.Development.json
+# fill in the real DB password and GROQ_API_KEY in that file (see Environment variables below)
+dotnet build
 
 # Frontend
-cd ..\frontend
+cd ..\frontend-ng
 npm install
-copy .env.local.example .env.local   # fill in NEXT_PUBLIC_* vars
 ```
 
 ## Running the app
 
-Two terminals, both from the **repo root**:
+Two terminals, backend from the **repo root** (not from inside `src\AgriChain.Api\`):
 
 ```powershell
-# Terminal 1 — backend (run from repo root, not from inside backend\)
-backend\venv\Scripts\activate
-uvicorn backend.main:app --reload --port 8000
+# Terminal 1 — backend
+dotnet run --project src\AgriChain.Api
 ```
 
 ```powershell
 # Terminal 2 — frontend
-cd frontend
-npm run dev
+cd frontend-ng
+npx ng serve
 ```
 
-Open **http://localhost:3000**, sign up (or use the [demo login](#demo-login)).
+Open **http://localhost:4200**, sign up or use the [demo login](#demo-login).
 
 ## Environment variables
 
-| File | Variable | Purpose |
-|---|---|---|
-| `backend/.env` | `SUPABASE_URL`, `SUPABASE_ANON_KEY` | Supabase project + anon key (backend re-auths as the caller per request) |
-| `backend/.env` | `GROQ_API_KEY` | Enables `/agent/chat`; without it the agent replies "not configured" |
-| `frontend/.env.local` | `NEXT_PUBLIC_SUPABASE_URL/ANON_KEY` | Client-side auth |
-| `frontend/.env.local` | `NEXT_PUBLIC_API_BASE_URL` | Backend URL (`http://localhost:8000` in dev) |
-| `frontend/.env.local` | `NEXT_PUBLIC_UPI_ID` | Payee UPI ID for payment QR codes |
+All in `src/AgriChain.Api/appsettings.Development.json` (gitignored — copy from `appsettings.Development.json.example` and fill in real values, never commit real secrets to the `.example` file):
+
+| Key | Purpose |
+|---|---|
+| `ConnectionStrings:DefaultConnection` | Supabase Postgres connection string, via the **connection pooler** (the direct `db.<ref>.supabase.co` host is IPv6-only and often unreachable) — format: `Host=aws-0-<region>.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.<project-ref>;Password=<db-password>;SSL Mode=Require` |
+| `Jwt:Secret` / `Jwt:Issuer` | Token signing — replace the dev secret before any real deployment |
+| `Groq:ApiKey` | Enables `/agent/chat` and `/grading/analyze`; without it both return a clean "not configured" message |
+
+`frontend-ng/src/environments/environment.ts` / `environment.development.ts` hold `apiBaseUrl` (`http://localhost:5000` by default).
 
 ## Database schema
 
 | Table | Purpose |
 |---|---|
 | `market_prices` | commodity/state/market price data |
-| `forecasts` | saved AI-forecast & market-analysis history |
+| `forecasts` | saved AI-forecast & market-analysis history (`user_id` → `AspNetUsers.Id`) |
 | `farm_plots` | plantings (`GROWING`/`HARVESTED`) |
 | `inventory` | warehouse stock per commodity |
 | `shipments` | dispatched loads (`IN_TRANSIT`/`ARRIVED`/`SOLD`) with simulated lat/lon |
 | `sales` | logged sales & revenue |
+| `crop_gradings` | vision-model grading results per photo |
+| `AspNetUsers` + Identity tables | in-house auth (replaces Supabase Auth) |
 
-All tables have RLS enabled; shipment destinations are MD5-hashed into stable India coordinates (no live GPS feed).
+Shipment destinations are MD5-hashed into stable India coordinates (no live GPS feed). EF Core migrations are hand-reviewed brownfield migrations — the initial one only creates the new tables (Identity, `crop_gradings`) and repairs `forecasts.user_id`'s foreign key; it does not touch the pre-existing 5 tables' data.
 
 ## API reference
 
-All routes except `/health` require `Authorization: Bearer <supabase_access_token>`.
+All routes except `/health` and `/auth/*` require `Authorization: Bearer <jwt>`.
 
-`GET /health` · `GET /market/commodities` · `GET /market/markets` · `POST /market/forecast` · `POST /market/analyze` · `GET /forecasts` · `GET|POST /farm/plots` · `POST /farm/harvest` · `GET /inventory` · `GET|POST /logistics/shipments` · `POST /logistics/shipments/advance` · `POST /logistics/shipments/{id}/deliver` · `GET|POST /finance/sales` · `GET /finance/summary` · `POST /agent/chat`
+`GET /health` · `POST /auth/register` · `POST /auth/login` · `GET /market/commodities` · `GET /market/markets` · `POST /market/forecast` · `POST /market/analyze` · `GET /forecasts` · `GET|POST /farm/plots` · `POST /farm/harvest` · `GET /inventory` · `GET|POST /logistics/shipments` · `POST /logistics/shipments/advance` · `POST /logistics/shipments/{id}/deliver` · `POST /logistics/optimize-route` · `GET|POST /finance/sales` · `GET /finance/summary` · `POST /agent/chat` · `POST /grading/analyze`
+
+Swagger UI is available at `/swagger` in development.
 
 ## The AI agent
 
-`POST /agent/chat` runs a Groq tool-calling loop over: `get_price_forecast`, `find_best_market`, `find_best_commodity`, `get_farm_plots`, `add_farm_plot`, `harvest_plot`, `get_inventory`, `create_shipment`, `get_active_shipments`, `log_sale`, `get_financial_summary` — each backed by the same service functions the manual pages use, and chainable across one instruction.
+`POST /agent/chat` runs a Groq tool-calling loop over: `get_price_forecast`, `find_best_market`, `find_best_commodity`, `get_farm_plots`, `add_farm_plot`, `harvest_plot`, `get_inventory`, `create_shipment`, `get_active_shipments`, `log_sale`, `get_financial_summary`, `optimize_shipment_route`, `grade_crop_photo` — each backed by the same service functions the manual pages use. The same tools are exposed over MCP at `/mcp` for external MCP clients.
 
 ## Seed data
 
-~5,000 rows pre-loaded: ~4,150 `market_prices` (40 commodities × 15 states), 150 `farm_plots` (104 growing / 46 harvested), 14 `inventory` rows, 300 `shipments` (240 in transit / 10 arrived / 50 sold), 350 `sales`, 60 `forecasts`. Run `scripts/seed_market_data.sql` for the full ~17k-row dataset instead.
+~5,000 rows pre-loaded in Supabase: ~4,150 `market_prices` (40 commodities × 15 states), 150 `farm_plots` (104 growing / 46 harvested), 14 `inventory` rows, 300 `shipments` (240 in transit / 10 arrived / 50 sold), 350 `sales`, 60 `forecasts`. Run `scripts/seed_market_data.sql` for the full ~17k-row dataset instead.
 
 ## Demo login
 
@@ -137,17 +144,17 @@ Email:    demo@agrichain.app
 Password: Demo!2026Pass
 ```
 
-Pre-confirmed, no email verification needed. You can also sign up your own account (Supabase emails a confirmation link).
+Auto-seeded into `AspNetUsers` on backend startup — no email confirmation step, works out of the box.
 
 ## Troubleshooting
 
-- **`ModuleNotFoundError: No module named 'backend'`** — run `uvicorn` from the repo root, not from inside `backend\`.
-- **`[WinError 10013]` on startup** — port 8000 already in use; stop the other process or use a different `--port`.
-- **Sign-up email rate-limited** — Supabase's default mailer caps at a few emails/hour. Use the demo login, wait it out, or disable "Confirm email" in Supabase Auth settings for local testing.
-- **Agent replies "not configured"** — add `GROQ_API_KEY` to `backend/.env` and restart.
+- **`ModuleNotFoundError`-style path issues / `dotnet run` fails to find the project** — run from the repo root: `dotnet run --project src\AgriChain.Api`, not from inside `src\AgriChain.Api\`.
+- **EF Core migration fails with a DNS error on `db.<ref>.supabase.co`** — that host is IPv6-only; use the pooler host (`aws-0-<region>.pooler.supabase.com`) instead, with username `postgres.<project-ref>`.
+- **`28P01: password authentication failed`** — the password in `appsettings.Development.json` doesn't match Supabase's current database password. Reset it from the dashboard (Project Settings → Database → **Reset database password** — use the button, don't type a custom value from memory) and copy the generated value exactly.
+- **Agent/grading replies "not configured" or with a provider error** — set `Groq:ApiKey` in `appsettings.Development.json`. If Groq returns `model_permission_blocked_org`, the models this app uses are blocked in your Groq organization's settings — enable them at console.groq.com/settings/limits, or swap the model constants in `src/AgriChain.Agent/GroqClient.cs` for ones your org has access to.
 
 ## Known limitations
 
 - Logistics is simulated (hashed coordinates + a progress counter), not real GPS.
-- Missing-auth requests return `422` rather than `401` (still correctly rejected).
 - UPI QR codes are a `upi://pay?...` deep link only — no real payment gateway.
+- The routing optimizer's spoilage-risk table is a static commodity-keyword lookup, not a live perishability model.

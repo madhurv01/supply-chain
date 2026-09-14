@@ -1,0 +1,131 @@
+<div class="flex flex-col gap-6">
+  <div class="flex items-center justify-between flex-wrap gap-2">
+    <div>
+      <h1 class="text-xl font-semibold text-white">Logistics</h1>
+      <p class="text-sm text-slate-400">Track shipments and optimize routing</p>
+    </div>
+    <mat-slide-toggle [checked]="liveMonitoring()" (change)="toggleLiveMonitoring()">
+      Live monitoring
+    </mat-slide-toggle>
+  </div>
+
+  <div class="card p-2">
+    <div id="logistics-map" class="w-full h-96 rounded-lg overflow-hidden"></div>
+  </div>
+
+  <div class="card p-4">
+    <p class="text-sm font-medium text-slate-300 mb-3">Route Optimizer</p>
+    <p class="text-xs text-slate-500 mb-3">Find the best market to ship to, ranked by price, distance, transit time and spoilage risk.</p>
+    <div class="flex flex-col sm:flex-row gap-3 sm:items-end mb-4">
+      <mat-form-field appearance="outline" class="sm:w-56">
+        <mat-label>Commodity</mat-label>
+        <input matInput [ngModel]="optCommodity()" (ngModelChange)="optCommodity.set($event)" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="sm:w-40">
+        <mat-label>Quantity (kg)</mat-label>
+        <input matInput type="number" [ngModel]="optQuantity()" (ngModelChange)="optQuantity.set($event)" />
+      </mat-form-field>
+      <button mat-flat-button color="primary" class="!h-11 !rounded-lg sm:mb-4" [disabled]="optimizing()" (click)="runOptimizer()">
+        {{ optimizing() ? 'Optimizing…' : 'Find Best Markets' }}
+      </button>
+    </div>
+
+    @if (recommendations().length > 0) {
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        @for (rec of recommendations(); track rec.market; let i = $index) {
+          <div class="card p-4 flex flex-col gap-2 border-2" [class.border-accent-emerald]="i === 0" [class.border-surface-border]="i !== 0">
+            <div class="flex justify-between items-start">
+              <p class="font-semibold text-white">{{ rec.market }}</p>
+              @if (i === 0) {
+                <span class="text-xs px-2 py-0.5 rounded-full bg-accent-dim accent-text">Best</span>
+              }
+            </div>
+            <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-slate-400">
+              @if (rec.price != null) { <div>Price: <span class="text-slate-200">₹{{ rec.price }}</span></div> }
+              @if (rec.distanceKm != null) { <div>Distance: <span class="text-slate-200">{{ rec.distanceKm }} km</span></div> }
+              @if (rec.transitTimeHours != null) { <div>Transit: <span class="text-slate-200">{{ rec.transitTimeHours }}h</span></div> }
+              @if (rec.spoilageRisk != null) { <div>Spoilage: <span class="text-slate-200">{{ rec.spoilageRisk }}</span></div> }
+              @if (rec.netScore != null) { <div>Score: <span class="text-slate-200">{{ rec.netScore }}</span></div> }
+            </div>
+            @if (rec.reasoning) {
+              <p class="text-xs text-slate-400 leading-relaxed">{{ rec.reasoning }}</p>
+            }
+            <button mat-stroked-button color="primary" class="!rounded-lg !mt-2" (click)="dispatchToMarket(rec)">
+              Dispatch to this market
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="card p-4" id="dispatch-form">
+    <p class="text-sm font-medium text-slate-300 mb-3">Dispatch Shipment</p>
+    <form class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3" (ngSubmit)="dispatch()">
+      <mat-form-field appearance="outline">
+        <mat-label>Truck ID</mat-label>
+        <input matInput name="truckId" [(ngModel)]="truckId" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Commodity</mat-label>
+        <input matInput name="commodity" [(ngModel)]="commodity" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Quantity</mat-label>
+        <input matInput type="number" name="quantity" [(ngModel)]="quantity" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Destination Market</mat-label>
+        <input matInput name="destinationMarket" [(ngModel)]="destinationMarket" />
+      </mat-form-field>
+      <div class="flex items-center">
+        <button mat-flat-button color="primary" class="!rounded-lg" type="submit">Dispatch</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card p-2 overflow-x-auto">
+    <p class="text-sm font-medium text-slate-300 px-2 pt-2">Active Shipments</p>
+    @if (shipments().length === 0) {
+      <p class="text-sm text-slate-500 p-4">No shipments yet.</p>
+    }
+    @if (shipments().length > 0) {
+      <table mat-table [dataSource]="shipments()" class="w-full !bg-transparent">
+        <ng-container matColumnDef="truckId">
+          <th mat-header-cell *matHeaderCellDef>Truck</th>
+          <td mat-cell *matCellDef="let row">{{ row.truckId }}</td>
+        </ng-container>
+        <ng-container matColumnDef="commodity">
+          <th mat-header-cell *matHeaderCellDef>Commodity</th>
+          <td mat-cell *matCellDef="let row">{{ row.commodity }}</td>
+        </ng-container>
+        <ng-container matColumnDef="quantity">
+          <th mat-header-cell *matHeaderCellDef>Qty</th>
+          <td mat-cell *matCellDef="let row">{{ row.quantity }}</td>
+        </ng-container>
+        <ng-container matColumnDef="destinationMarket">
+          <th mat-header-cell *matHeaderCellDef>Destination</th>
+          <td mat-cell *matCellDef="let row">{{ row.destinationMarket }}</td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let row">{{ row.status }}</td>
+        </ng-container>
+        <ng-container matColumnDef="progress">
+          <th mat-header-cell *matHeaderCellDef>Progress</th>
+          <td mat-cell *matCellDef="let row">{{ row.progress }}%</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let row">
+            @if (row.status !== 'DELIVERED') {
+              <button mat-button color="primary" (click)="deliver(row)">Mark Delivered</button>
+            }
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+    }
+  </div>
+</div>

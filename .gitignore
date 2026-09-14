@@ -1,7 +1,15 @@
-.env
-backend/.env
-.venv/
-backend/venv/
-__pycache__/
-*.pyc
+# .NET backend (src/)
+src/**/bin/
+src/**/obj/
+src/AgriChain.Api/appsettings.Development.json
+src/AgriChain.Api/appsettings.*.local.json
+
+# Angular frontend (frontend-ng/)
+frontend-ng/node_modules/
+frontend-ng/dist/
+frontend-ng/.angular/
+frontend-ng/npm-debug.log*
+
+# misc
 *.db
+.DS_Store

@@ -1,0 +1,41 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h1 class="text-xl font-semibold text-white">Inventory</h1>
+    <p class="text-sm text-slate-400">Stock on hand across all commodities</p>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div class="stat-card">
+      <p class="text-xs text-slate-400">Total Quantity</p>
+      <p class="text-2xl font-semibold text-white mt-1">{{ totalQuantity | number:'1.0-0' }}</p>
+    </div>
+    <div class="stat-card">
+      <p class="text-xs text-slate-400">Distinct Commodities</p>
+      <p class="text-2xl font-semibold accent-text mt-1">{{ distinctCommodities }}</p>
+    </div>
+  </div>
+
+  <div class="card p-2 overflow-x-auto">
+    @if (!loading() && items().length === 0) {
+      <p class="text-sm text-slate-500 p-4">No inventory recorded yet.</p>
+    }
+    @if (items().length > 0) {
+      <table mat-table [dataSource]="items()" class="w-full !bg-transparent">
+        <ng-container matColumnDef="commodity">
+          <th mat-header-cell *matHeaderCellDef>Commodity</th>
+          <td mat-cell *matCellDef="let row">{{ row.commodity }}</td>
+        </ng-container>
+        <ng-container matColumnDef="quantity">
+          <th mat-header-cell *matHeaderCellDef>Quantity</th>
+          <td mat-cell *matCellDef="let row">{{ row.quantity }}</td>
+        </ng-container>
+        <ng-container matColumnDef="unit">
+          <th mat-header-cell *matHeaderCellDef>Unit</th>
+          <td mat-cell *matCellDef="let row">{{ row.unit }}</td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+    }
+  </div>
+</div>

@@ -1,0 +1,62 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h1 class="text-xl font-semibold text-white">Farm</h1>
+    <p class="text-sm text-slate-400">Manage plots and harvests</p>
+  </div>
+
+  <div class="card p-4">
+    <p class="text-sm font-medium text-slate-300 mb-3">Add Plot</p>
+    <form class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3" (ngSubmit)="addPlot()">
+      <mat-form-field appearance="outline">
+        <mat-label>Commodity</mat-label>
+        <input matInput name="commodity" [(ngModel)]="commodity" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Plot ID</mat-label>
+        <input matInput name="plotId" [(ngModel)]="plotId" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Quantity</mat-label>
+        <input matInput type="number" name="quantity" [(ngModel)]="quantity" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Date Planted</mat-label>
+        <input matInput [matDatepicker]="dp1" name="datePlanted" [(ngModel)]="datePlanted" />
+        <mat-datepicker-toggle matIconSuffix [for]="dp1"></mat-datepicker-toggle>
+        <mat-datepicker #dp1></mat-datepicker>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Expected Harvest</mat-label>
+        <input matInput [matDatepicker]="dp2" name="expectedHarvestDate" [(ngModel)]="expectedHarvestDate" />
+        <mat-datepicker-toggle matIconSuffix [for]="dp2"></mat-datepicker-toggle>
+        <mat-datepicker #dp2></mat-datepicker>
+      </mat-form-field>
+      <div class="lg:col-span-5">
+        <button mat-flat-button color="primary" class="!rounded-lg" type="submit" [disabled]="submitting()">
+          {{ submitting() ? 'Adding…' : 'Add Plot' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div>
+    <p class="text-sm font-medium text-slate-300 mb-3">Growing Plots</p>
+    @if (!loading() && plots().length === 0) {
+      <p class="text-sm text-slate-500">No growing plots yet.</p>
+    }
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      @for (p of plots(); track p.plotId) {
+        <div class="card p-4 flex flex-col gap-2">
+          <div class="flex justify-between items-start">
+            <p class="font-semibold text-white">{{ p.commodity }}</p>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-accent-dim accent-text">{{ p.plotId }}</span>
+          </div>
+          <p class="text-sm text-slate-400">Qty: {{ p.quantity }}</p>
+          <p class="text-xs text-slate-500">Planted: {{ p.datePlanted | date:'mediumDate' }}</p>
+          <p class="text-xs text-slate-500">Expected: {{ p.expectedHarvestDate | date:'mediumDate' }}</p>
+          <button mat-stroked-button color="primary" class="!rounded-lg !mt-2" (click)="harvest(p)">Harvest Now</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

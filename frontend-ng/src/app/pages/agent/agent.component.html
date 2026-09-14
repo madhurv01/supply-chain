@@ -1,0 +1,64 @@
+<div class="flex flex-col h-[calc(100vh-8rem)] gap-4">
+  <div>
+    <h1 class="text-xl font-semibold text-white">AI Agent</h1>
+    <p class="text-sm text-slate-400">Ask about markets, forecasts, logistics and more</p>
+  </div>
+
+  <div class="card flex-1 flex flex-col overflow-hidden">
+    <div class="flex-1 overflow-y-auto p-4 space-y-4">
+      @if (messages().length === 0) {
+        <div class="h-full flex flex-col items-center justify-center text-center gap-4 py-10">
+          <mat-icon class="!w-10 !h-10 !text-[40px] text-accent-lime">smart_toy</mat-icon>
+          <p class="text-slate-400 max-w-md">Ask me anything about market prices, forecasts, routing or your farm data.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-xl w-full">
+            @for (ex of examples; track ex) {
+              <button class="text-left text-sm px-3 py-2 rounded-lg border border-surface-border bg-surface-2 hover:border-accent-emerald text-slate-300" (click)="useExample(ex)">
+                {{ ex }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @for (msg of messages(); track $index) {
+        <div class="flex" [class.justify-end]="msg.role === 'user'">
+          <div
+            class="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm"
+            [class.bg-accent-emerald]="msg.role === 'user'"
+            [class.text-surface-0]="msg.role === 'user'"
+            [class.bg-surface-2]="msg.role !== 'user'"
+            [class.text-slate-200]="msg.role !== 'user'"
+          >
+            <p class="whitespace-pre-wrap">{{ msg.content }}</p>
+            @if (msg.toolCalls && msg.toolCalls.length) {
+              <div class="mt-2 pt-2 border-t border-white/10 space-y-1">
+                @for (tc of msg.toolCalls; track $index) {
+                  <div class="text-xs text-accent-lime/80 font-mono">
+                    used tool: {{ tc.name }}({{ formatArgs(tc.args) }})
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      @if (sending()) {
+        <div class="flex items-center gap-2 text-slate-400 text-sm">
+          <mat-spinner diameter="16"></mat-spinner>
+          <span>Thinking…</span>
+        </div>
+      }
+      <div #scrollAnchor></div>
+    </div>
+
+    <form class="border-t border-surface-border p-3 flex items-end gap-2" (ngSubmit)="send()">
+      <mat-form-field appearance="outline" class="flex-1 !mb-[-1.25em]">
+        <input matInput name="draft" [(ngModel)]="draft" placeholder="Ask the agent…" autocomplete="off" />
+      </mat-form-field>
+      <button mat-icon-button color="primary" type="submit" [disabled]="sending() || !draft.trim()">
+        <mat-icon>send</mat-icon>
+      </button>
+    </form>
+  </div>
+</div>
