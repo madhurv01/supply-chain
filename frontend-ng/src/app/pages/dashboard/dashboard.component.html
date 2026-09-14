@@ -36,7 +36,7 @@
       } @else if (errorRevenue()) {
         <div class="flex-1 flex items-center justify-center text-sm text-amber-700">{{ errorRevenue() }}</div>
       } @else {
-        <div class="flex-1">
+        <div class="flex-1 min-h-0 relative overflow-hidden">
           <canvas baseChart [data]="revenueTrendData()" [options]="lineOptions" type="line"></canvas>
         </div>
       }
@@ -55,7 +55,7 @@
       } @else if (errorInventory()) {
         <div class="flex-1 flex items-center justify-center text-sm text-amber-700">{{ errorInventory() }}</div>
       } @else {
-        <div class="flex-1">
+        <div class="flex-1 min-h-0 relative overflow-hidden">
           <canvas baseChart [data]="inventoryChartData()" [options]="doughnutOptions" type="doughnut"></canvas>
         </div>
       }
