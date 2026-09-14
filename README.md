@@ -61,38 +61,57 @@ supply-chain/
 └── README.md
 ```
 
-## Setup
+## Requirements
 
-**Prerequisites**: .NET 8+ SDK, Node.js 18+ (Angular CLI installs via `npx`), a free [Groq](https://console.groq.com/) API key.
+| Tool | Version | Notes |
+|---|---|---|
+| [.NET SDK](https://dotnet.microsoft.com/download) | 8.0+ (developed/tested on 10.0.400) | for the backend (`src/`) |
+| [Node.js](https://nodejs.org/) | 18+ (tested on 22.x) | for the frontend (`frontend-ng/`) |
+| npm | ships with Node | Angular CLI itself runs via `npx`, no global install needed |
+| A Supabase project | — | Postgres only, accessed via the connection pooler (see [Environment variables](#environment-variables)) |
+| A [Groq](https://console.groq.com/) API key | free tier works | powers `/agent/chat` and `/grading/analyze`; optional — the app runs without it, those two features just report "not configured" |
+
+Everything else (EF Core, Angular Material, Leaflet, Chart.js, etc.) is a project dependency restored automatically by `dotnet build` / `npm install` — nothing else to install globally, except the optional `dotnet-ef` CLI tool (only needed if you're changing the database schema, see below).
+
+## Setup (first time only)
 
 ```powershell
-# Backend
+# Backend — restore packages, wire up secrets
 cd src
 copy AgriChain.Api\appsettings.Development.json.example AgriChain.Api\appsettings.Development.json
-# fill in the real DB password and GROQ_API_KEY in that file (see Environment variables below)
+# then edit that file: fill in the real Supabase DB password and your GROQ_API_KEY
+# (see Environment variables below for the exact connection-string format)
+dotnet restore
 dotnet build
 
-# Frontend
+# Frontend — install npm packages
 cd ..\frontend-ng
 npm install
 ```
 
+If you ever need to change the database schema, install the EF Core CLI once (`dotnet tool install --global dotnet-ef`) and run migrations from `src/`:
+```powershell
+dotnet-ef database update --project AgriChain.Infrastructure --startup-project AgriChain.Api
+```
+
 ## Running the app
 
-Two terminals, backend from the **repo root** (not from inside `src\AgriChain.Api\`):
+Two terminals, every time you want to run the app. **Run the backend command from the repo root** (`supply-chain\`), not from inside `src\AgriChain.Api\` — `dotnet run --project` resolves the path itself.
 
 ```powershell
-# Terminal 1 — backend
+# Terminal 1 — backend (repo root)
 dotnet run --project src\AgriChain.Api
 ```
+Wait for `Now listening on: http://localhost:5000`.
 
 ```powershell
 # Terminal 2 — frontend
 cd frontend-ng
 npx ng serve
 ```
+Wait for `Application bundle generation complete` / the `Local: http://localhost:4200/` line.
 
-Open **http://localhost:4200**, sign up or use the [demo login](#demo-login).
+Then open **http://localhost:4200** and sign up, or use the [demo login](#demo-login).
 
 ## Environment variables
 
@@ -155,6 +174,6 @@ Auto-seeded into `AspNetUsers` on backend startup — no email confirmation step
 
 ## Known limitations
 
-- Logistics is simulated (hashed coordinates + a progress counter), not real GPS.
+- Logistics is simulated — destination coordinates are deterministically hashed from the market name (no real geocoding), and shipment progress is computed from real elapsed time vs. an estimated transit duration (distance ÷ assumed truck speed), not an actual GPS feed.
 - UPI QR codes are a `upi://pay?...` deep link only — no real payment gateway.
 - The routing optimizer's spoilage-risk table is a static commodity-keyword lookup, not a live perishability model.
