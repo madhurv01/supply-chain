@@ -442,12 +442,10 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   toggleLiveMonitoring(): void {
     this.liveMonitoring.update((v) => !v);
     if (this.liveMonitoring()) {
-      this.pollHandle = setInterval(() => {
-        this.api.advanceShipments().subscribe({
-          next: () => this.loadShipments(),
-          error: () => this.loadShipments(),
-        });
-      }, 8000);
+      // Shipment progress is now computed server-side from real elapsed time on every
+      // fetch, so live monitoring just needs to re-poll for the latest positions -
+      // no separate "advance" call needed to make anything move.
+      this.pollHandle = setInterval(() => this.loadShipments(), 5000);
     } else if (this.pollHandle) {
       clearInterval(this.pollHandle);
       this.pollHandle = undefined;
