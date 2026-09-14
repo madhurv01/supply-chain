@@ -44,10 +44,10 @@
 
     <!-- Panel 2: Inventory composition -->
     <div class="card p-4 h-80 flex flex-col panel-violet">
-      <div class="flex items-center justify-between mb-2">
-        <p class="text-sm font-medium text-slate-700 panel-heading">🧺 Inventory Composition</p>
+      <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 mb-2">
+        <p class="text-sm font-medium text-slate-700 panel-heading shrink-0">🧺 Inventory Composition</p>
         @if (!loadingMovers() && inventoryValue() > 0) {
-          <span class="text-xs text-slate-500">Est. value: <span class="font-semibold accent-text">{{ inventoryValue() | currency:'INR':'symbol':'1.0-0' }}</span></span>
+          <span class="text-xs text-slate-500 whitespace-nowrap">Est. value: <span class="font-semibold accent-text">{{ inventoryValue() | currency:'INR':'symbol':'1.0-0' }}</span></span>
         }
       </div>
       @if (loadingInventory()) {
