@@ -69,108 +69,6 @@
     </div>
   </div>
 
-  <div class="card p-2">
-    <div id="logistics-map" class="w-full h-[32rem] rounded-lg overflow-hidden"></div>
-  </div>
-
-  <mat-accordion multi class="flex flex-col gap-3">
-    <mat-expansion-panel [expanded]="activePanelOpen()" (opened)="toggleActivePanel(true)" (closed)="toggleActivePanel(false)">
-      <mat-expansion-panel-header>
-        <mat-panel-title class="!items-center">Active Shipments</mat-panel-title>
-        <mat-panel-description>
-          {{ activeShipments().length }} in transit · {{ activeQuantity() | number:'1.0-0' }} kg · avg {{ activeAvgProgress() | percent:'1.0-0' }} progress
-        </mat-panel-description>
-      </mat-expansion-panel-header>
-
-      @if (activeShipments().length === 0) {
-        <p class="text-sm text-slate-500 p-4">No active shipments.</p>
-      }
-      @if (activeShipments().length > 0) {
-        <table mat-table [dataSource]="activeShipments()" class="w-full !bg-transparent">
-          <ng-container matColumnDef="truckId">
-            <th mat-header-cell *matHeaderCellDef>Truck</th>
-            <td mat-cell *matCellDef="let row">{{ row.truckId }}</td>
-          </ng-container>
-          <ng-container matColumnDef="commodity">
-            <th mat-header-cell *matHeaderCellDef>Commodity</th>
-            <td mat-cell *matCellDef="let row">{{ row.commodity }}</td>
-          </ng-container>
-          <ng-container matColumnDef="quantity">
-            <th mat-header-cell *matHeaderCellDef>Qty</th>
-            <td mat-cell *matCellDef="let row">{{ row.quantity | number:'1.0-2' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="destinationMarket">
-            <th mat-header-cell *matHeaderCellDef>Destination</th>
-            <td mat-cell *matCellDef="let row">{{ row.destinationMarket }}</td>
-          </ng-container>
-          <ng-container matColumnDef="status">
-            <th mat-header-cell *matHeaderCellDef>Status</th>
-            <td mat-cell *matCellDef="let row">{{ row.status }}</td>
-          </ng-container>
-          <ng-container matColumnDef="progress">
-            <th mat-header-cell *matHeaderCellDef>Progress</th>
-            <td mat-cell *matCellDef="let row">{{ row.progress | percent:'1.0-0' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let row">
-              <button mat-button color="primary" (click)="deliver(row)">Mark Delivered</button>
-            </td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="columns"></tr>
-          <tr mat-row *matRowDef="let row; columns: columns"></tr>
-        </table>
-      }
-    </mat-expansion-panel>
-
-    <mat-expansion-panel [expanded]="completedPanelOpen()" (opened)="toggleCompletedPanel(true)" (closed)="toggleCompletedPanel(false)">
-      <mat-expansion-panel-header>
-        <mat-panel-title class="!items-center">Completed Shipments</mat-panel-title>
-        <mat-panel-description>
-          {{ completedShipments().length }} delivered · {{ completedQuantity() | number:'1.0-0' }} kg · avg {{ completedAvgAge() | number:'1.0-1' }} h since dispatch
-        </mat-panel-description>
-      </mat-expansion-panel-header>
-
-      @if (completedShipments().length === 0) {
-        <p class="text-sm text-slate-500 p-4">No completed shipments yet.</p>
-      }
-      @if (completedShipments().length > 0) {
-        <table mat-table [dataSource]="completedShipments()" class="w-full !bg-transparent">
-          <ng-container matColumnDef="truckId">
-            <th mat-header-cell *matHeaderCellDef>Truck</th>
-            <td mat-cell *matCellDef="let row">{{ row.truckId }}</td>
-          </ng-container>
-          <ng-container matColumnDef="commodity">
-            <th mat-header-cell *matHeaderCellDef>Commodity</th>
-            <td mat-cell *matCellDef="let row">{{ row.commodity }}</td>
-          </ng-container>
-          <ng-container matColumnDef="quantity">
-            <th mat-header-cell *matHeaderCellDef>Qty</th>
-            <td mat-cell *matCellDef="let row">{{ row.quantity | number:'1.0-2' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="destinationMarket">
-            <th mat-header-cell *matHeaderCellDef>Destination</th>
-            <td mat-cell *matCellDef="let row">{{ row.destinationMarket }}</td>
-          </ng-container>
-          <ng-container matColumnDef="status">
-            <th mat-header-cell *matHeaderCellDef>Status</th>
-            <td mat-cell *matCellDef="let row">{{ row.status }}</td>
-          </ng-container>
-          <ng-container matColumnDef="progress">
-            <th mat-header-cell *matHeaderCellDef>Progress</th>
-            <td mat-cell *matCellDef="let row">{{ row.progress | percent:'1.0-0' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let row"></td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="columns"></tr>
-          <tr mat-row *matRowDef="let row; columns: columns"></tr>
-        </table>
-      }
-    </mat-expansion-panel>
-  </mat-accordion>
-
   <div class="card p-4">
     <p class="text-sm font-medium text-slate-700 mb-3">Route Optimizer</p>
     <p class="text-xs text-slate-500 mb-3">Find the best market to ship to, ranked by price, distance, transit time and spoilage risk.</p>
@@ -242,4 +140,140 @@
     </form>
   </div>
 
+  <div class="card p-2">
+    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide px-2 pt-2">Fleet Overview — destination markets</p>
+    <div id="logistics-overview-map" class="w-full h-40 rounded-lg overflow-hidden mt-2"></div>
+  </div>
+
+  <mat-accordion multi class="flex flex-col gap-3">
+    <mat-expansion-panel [expanded]="activePanelOpen()" (opened)="activePanelOpen.set(true)" (closed)="activePanelOpen.set(false)">
+      <mat-expansion-panel-header>
+        <mat-panel-title class="!items-center">Active Shipments</mat-panel-title>
+        <mat-panel-description>
+          {{ activeShipments().length }} in transit · {{ activeQuantity() | number:'1.0-0' }} kg · avg {{ activeAvgProgress() | percent:'1.0-0' }} progress
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+
+      @if (activeShipments().length === 0) {
+        <p class="text-sm text-slate-500 p-4">No active shipments.</p>
+      }
+      <div class="flex flex-col gap-2">
+        @for (row of activeShipments(); track row.id) {
+          <div class="rounded-lg border border-surface-border overflow-hidden">
+            <button
+              type="button"
+              class="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-slate-50 transition-colors"
+              (click)="toggleShipmentExpand(row)"
+            >
+              <mat-icon class="!text-lg !w-5 !h-5 text-slate-400 transition-transform" [class.rotate-90]="expandedShipmentId() === row.id">
+                chevron_right
+              </mat-icon>
+              <div class="flex-1 grid grid-cols-2 sm:grid-cols-5 gap-x-3 gap-y-0.5 text-sm">
+                <span class="font-medium text-slate-800">{{ row.truckId }}</span>
+                <span class="text-slate-600">{{ row.commodity }}</span>
+                <span class="text-slate-600">{{ row.quantity | number:'1.0-2' }} kg</span>
+                <span class="text-slate-600 truncate">{{ row.destinationMarket }}</span>
+                <span class="text-slate-600">{{ row.progress | percent:'1.0-0' }}</span>
+              </div>
+              <button mat-button color="primary" class="!text-xs" (click)="$event.stopPropagation(); deliver(row)">Mark Delivered</button>
+            </button>
+
+            @if (expandedShipmentId() === row.id) {
+              <div class="border-t border-surface-border p-3 bg-slate-50">
+                <div class="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-4">
+                  <div class="flex flex-col gap-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                        [class.bg-emerald-100]="trackingStage(row) !== 'arrived'"
+                        [class.text-emerald-700]="trackingStage(row) !== 'arrived'"
+                        [class.bg-blue-100]="trackingStage(row) === 'arrived'"
+                        [class.text-blue-700]="trackingStage(row) === 'arrived'">
+                        {{ trackingStage(row) === 'arrived' ? 'Arrived' : 'In Transit' }}
+                      </span>
+                      <span class="text-xs text-slate-500">ETA: {{ etaLabel(row) }}</span>
+                    </div>
+
+                    <div class="flex items-center justify-between text-[11px] text-slate-500 font-medium">
+                      <span [class.text-emerald-600]="trackingStage(row) === 'dispatched' || trackingStage(row) === 'transit' || trackingStage(row) === 'arrived'">Dispatched</span>
+                      <span [class.text-emerald-600]="trackingStage(row) === 'transit' || trackingStage(row) === 'arrived'">In Transit</span>
+                      <span [class.text-emerald-600]="trackingStage(row) === 'arrived'">Arrived</span>
+                    </div>
+                    <div class="h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                      <div class="h-full bg-emerald-500 transition-all" [style.width.%]="(row.progress || 0) * 100"></div>
+                    </div>
+                    <p class="text-xs text-slate-500 -mt-1">{{ row.progress | percent:'1.0-0' }} of route complete</p>
+
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-slate-600 mt-1">
+                      <div>Truck: <span class="text-slate-800 font-medium">{{ row.truckId }}</span></div>
+                      <div>Commodity: <span class="text-slate-800 font-medium">{{ row.commodity }}</span></div>
+                      <div>Quantity: <span class="text-slate-800 font-medium">{{ row.quantity | number:'1.0-2' }} kg</span></div>
+                      <div>Destination: <span class="text-slate-800 font-medium">{{ row.destinationMarket }}</span></div>
+                    </div>
+                  </div>
+
+                  <div [id]="'shipment-map-' + row.id" class="w-full h-56 sm:h-64 rounded-lg overflow-hidden"></div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </mat-expansion-panel>
+
+    <mat-expansion-panel [expanded]="completedPanelOpen()" (opened)="completedPanelOpen.set(true)" (closed)="completedPanelOpen.set(false)">
+      <mat-expansion-panel-header>
+        <mat-panel-title class="!items-center">Completed Shipments</mat-panel-title>
+        <mat-panel-description>
+          {{ completedShipments().length }} delivered · {{ completedQuantity() | number:'1.0-0' }} kg · avg {{ completedAvgAge() | number:'1.0-1' }} h since dispatch
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+
+      @if (completedShipments().length === 0) {
+        <p class="text-sm text-slate-500 p-4">No completed shipments yet.</p>
+      }
+      <div class="flex flex-col gap-2">
+        @for (row of completedShipments(); track row.id) {
+          <div class="rounded-lg border border-surface-border overflow-hidden">
+            <button
+              type="button"
+              class="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-slate-50 transition-colors"
+              (click)="toggleShipmentExpand(row)"
+            >
+              <mat-icon class="!text-lg !w-5 !h-5 text-slate-400 transition-transform" [class.rotate-90]="expandedShipmentId() === row.id">
+                chevron_right
+              </mat-icon>
+              <div class="flex-1 grid grid-cols-2 sm:grid-cols-5 gap-x-3 gap-y-0.5 text-sm">
+                <span class="font-medium text-slate-800">{{ row.truckId }}</span>
+                <span class="text-slate-600">{{ row.commodity }}</span>
+                <span class="text-slate-600">{{ row.quantity | number:'1.0-2' }} kg</span>
+                <span class="text-slate-600 truncate">{{ row.destinationMarket }}</span>
+                <span class="text-slate-600">{{ row.status }}</span>
+              </div>
+            </button>
+
+            @if (expandedShipmentId() === row.id) {
+              <div class="border-t border-surface-border p-3 bg-slate-50">
+                <div class="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-4">
+                  <div class="flex flex-col gap-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">Arrived</span>
+                      <span class="text-xs text-slate-500">ETA: {{ etaLabel(row) }}</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-slate-600 mt-1">
+                      <div>Truck: <span class="text-slate-800 font-medium">{{ row.truckId }}</span></div>
+                      <div>Commodity: <span class="text-slate-800 font-medium">{{ row.commodity }}</span></div>
+                      <div>Quantity: <span class="text-slate-800 font-medium">{{ row.quantity | number:'1.0-2' }} kg</span></div>
+                      <div>Destination: <span class="text-slate-800 font-medium">{{ row.destinationMarket }}</span></div>
+                    </div>
+                  </div>
+
+                  <div [id]="'shipment-map-' + row.id" class="w-full h-56 sm:h-64 rounded-lg overflow-hidden"></div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </mat-expansion-panel>
+  </mat-accordion>
 </div>

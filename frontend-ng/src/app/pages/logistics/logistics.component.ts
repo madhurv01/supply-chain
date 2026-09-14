@@ -3,9 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatTableModule } from '@angular/material/table';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BaseChartDirective } from 'ng2-charts';
@@ -15,25 +15,16 @@ import 'leaflet.markercluster';
 import { ApiService } from '../../core/services/api.service';
 import { RouteRecommendation, Shipment } from '../../core/models/api.models';
 
-interface TrackedShipment {
+interface FocusedTrack {
+  id: string | number;
+  map: L.Map;
   marker: L.Marker;
   routeLine: L.LayerGroup;
   currentLatLng: L.LatLng;
   animFrame?: number;
-  shipment: Shipment;
-  section: 'active' | 'completed';
-}
-
-interface DestMarker {
-  marker: L.Marker;
-  section: 'active' | 'completed';
 }
 
 const ANIMATION_MS = 1500;
-const INDIA_BOUNDS: L.LatLngBoundsExpression = [
-  [4, 60],
-  [40, 100],
-];
 
 function bearing(from: L.LatLng, to: L.LatLng): number {
   const lat1 = (from.lat * Math.PI) / 180;
@@ -64,6 +55,28 @@ function shipmentSection(status: string): 'active' | 'completed' {
   return status === 'ARRIVED' || status === 'SOLD' ? 'completed' : 'active';
 }
 
+function addBaseLayers(map: L.Map): void {
+  const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19,
+  });
+  const satellite = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    {
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+      maxZoom: 19,
+    },
+  );
+  const terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap (CC-BY-SA)',
+    maxZoom: 17,
+  });
+  street.addTo(map);
+  L.control
+    .layers({ Street: street, Satellite: satellite, Terrain: terrain }, {}, { position: 'topright', collapsed: true })
+    .addTo(map);
+}
+
 @Component({
   selector: 'app-logistics',
   standalone: true,
@@ -72,9 +85,9 @@ function shipmentSection(status: string): 'active' | 'completed' {
     FormsModule,
     MatButtonModule,
     MatFormFieldModule,
+    MatIconModule,
     MatInputModule,
     MatSlideToggleModule,
-    MatTableModule,
     MatExpansionModule,
     BaseChartDirective,
   ],
@@ -83,10 +96,10 @@ function shipmentSection(status: string): 'active' | 'completed' {
 export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly shipments = signal<Shipment[]>([]);
   readonly liveMonitoring = signal(false);
-  readonly columns = ['truckId', 'commodity', 'quantity', 'destinationMarket', 'status', 'progress', 'actions'];
 
   readonly activePanelOpen = signal(true);
   readonly completedPanelOpen = signal(false);
+  readonly expandedShipmentId = signal<string | number | null>(null);
 
   readonly activeShipments = computed(() => this.shipments().filter((s) => shipmentSection(s.status) === 'active'));
   readonly completedShipments = computed(() => this.shipments().filter((s) => shipmentSection(s.status) === 'completed'));
@@ -172,15 +185,9 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly recommendations = signal<RouteRecommendation[]>([]);
   readonly optimizing = signal(false);
 
-  private map?: L.Map;
-  private activeCluster?: L.MarkerClusterGroup;
-  private completedCluster?: L.MarkerClusterGroup;
-  private activeDestLayer?: L.LayerGroup;
-  private completedDestLayer?: L.LayerGroup;
-  private activeRouteLayer?: L.LayerGroup;
-  private completedRouteLayer?: L.LayerGroup;
-  private tracked = new Map<string | number, TrackedShipment>();
-  private destMarkers = new Map<string | number, DestMarker>();
+  private overviewMap?: L.Map;
+  private overviewCluster?: L.MarkerClusterGroup;
+  private focused?: FocusedTrack;
   private pollHandle?: ReturnType<typeof setInterval>;
 
   constructor(private api: ApiService, private snackBar: MatSnackBar) {}
@@ -190,143 +197,51 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    this.initMap();
+    this.initOverviewMap();
   }
 
   ngOnDestroy(): void {
     if (this.pollHandle) {
       clearInterval(this.pollHandle);
     }
-    for (const t of this.tracked.values()) {
-      if (t.animFrame) {
-        cancelAnimationFrame(t.animFrame);
+    this.collapseFocused();
+    this.overviewMap?.remove();
+  }
+
+  private initOverviewMap(): void {
+    this.overviewMap = L.map('logistics-overview-map', { zoomControl: true, attributionControl: true, minZoom: 2 }).setView([20, 60], 3);
+    addBaseLayers(this.overviewMap);
+    this.overviewCluster = (L as any).markerClusterGroup({ maxClusterRadius: 50, spiderfyOnMaxZoom: true, showCoverageOnHover: false });
+    this.overviewCluster!.addTo(this.overviewMap);
+    this.renderOverviewMarkers();
+  }
+
+  private renderOverviewMarkers(): void {
+    if (!this.overviewCluster) {
+      return;
+    }
+    this.overviewCluster.clearLayers();
+    for (const s of this.shipments()) {
+      if (s.destinationLat == null || s.destinationLon == null) {
+        continue;
       }
+      const color = this.statusColor(s.status);
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="background:${color};width:12px;height:12px;border-radius:3px;border:2px solid #ffffff;box-shadow:0 0 0 1px rgba(0,0,0,0.15);"></div>`,
+        iconSize: [12, 12],
+        iconAnchor: [6, 6],
+      });
+      const marker = L.marker([s.destinationLat, s.destinationLon], { icon }).bindPopup(this.popupHtml(s));
+      this.overviewCluster.addLayer(marker);
     }
-    this.map?.remove();
-  }
-
-  private initMap(): void {
-    this.map = L.map('logistics-map', { zoomControl: true, attributionControl: true, minZoom: 4 }).setView([22.4, 80], 5);
-    this.map.setMaxBounds(INDIA_BOUNDS);
-    (this.map as any).options.maxBoundsViscosity = 1.0;
-
-    const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 19,
-    });
-    const satellite = L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      {
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
-        maxZoom: 19,
-      },
-    );
-    const terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-      attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap (CC-BY-SA)',
-      maxZoom: 17,
-    });
-
-    street.addTo(this.map);
-    L.control
-      .layers(
-        { Street: street, Satellite: satellite, Terrain: terrain },
-        {},
-        { position: 'topright', collapsed: false },
-      )
-      .addTo(this.map);
-
-    this.activeCluster = (L as any).markerClusterGroup({ maxClusterRadius: 40, spiderfyOnMaxZoom: true, showCoverageOnHover: false });
-    this.completedCluster = (L as any).markerClusterGroup({ maxClusterRadius: 40, spiderfyOnMaxZoom: true, showCoverageOnHover: false });
-    this.activeDestLayer = L.layerGroup();
-    this.completedDestLayer = L.layerGroup();
-    this.activeRouteLayer = L.layerGroup();
-    this.completedRouteLayer = L.layerGroup();
-
-    if (this.activePanelOpen()) {
-      this.activeRouteLayer.addTo(this.map);
-      this.activeDestLayer.addTo(this.map);
-      this.activeCluster!.addTo(this.map);
-    }
-    if (this.completedPanelOpen()) {
-      this.completedRouteLayer.addTo(this.map);
-      this.completedDestLayer.addTo(this.map);
-      this.completedCluster!.addTo(this.map);
-    }
-
-    this.addLegend();
-    this.renderMarkers();
-  }
-
-  toggleActivePanel(opened: boolean): void {
-    this.activePanelOpen.set(opened);
-    if (!this.map || !this.activeCluster || !this.activeDestLayer || !this.activeRouteLayer) {
-      return;
-    }
-    if (opened) {
-      this.activeRouteLayer.addTo(this.map);
-      this.activeDestLayer.addTo(this.map);
-      this.activeCluster.addTo(this.map);
-    } else {
-      this.map.removeLayer(this.activeRouteLayer);
-      this.map.removeLayer(this.activeDestLayer);
-      this.map.removeLayer(this.activeCluster);
-    }
-  }
-
-  toggleCompletedPanel(opened: boolean): void {
-    this.completedPanelOpen.set(opened);
-    if (!this.map || !this.completedCluster || !this.completedDestLayer || !this.completedRouteLayer) {
-      return;
-    }
-    if (opened) {
-      this.completedRouteLayer.addTo(this.map);
-      this.completedDestLayer.addTo(this.map);
-      this.completedCluster.addTo(this.map);
-    } else {
-      this.map.removeLayer(this.completedRouteLayer);
-      this.map.removeLayer(this.completedDestLayer);
-      this.map.removeLayer(this.completedCluster);
-    }
-  }
-
-  private addLegend(): void {
-    if (!this.map) {
-      return;
-    }
-    const legend = new L.Control({ position: 'bottomleft' });
-    legend.onAdd = () => {
-      const div = L.DomUtil.create('div', 'map-legend');
-      div.innerHTML = `
-        <div class="map-legend__title">Legend</div>
-        <div class="map-legend__row"><span class="map-legend__dot" style="background:#059669"></span>In transit</div>
-        <div class="map-legend__row"><span class="map-legend__dot" style="background:#2563eb"></span>Completed</div>
-        <div class="map-legend__row"><span class="map-legend__square" style="background:#f59e0b"></span>Destination market</div>
-        <div class="map-legend__row"><span class="map-legend__line map-legend__line--solid"></span>Traveled</div>
-        <div class="map-legend__row"><span class="map-legend__line map-legend__line--dashed"></span>Remaining</div>
-      `;
-      L.DomEvent.disableClickPropagation(div);
-      return div;
-    };
-    legend.addTo(this.map);
   }
 
   private statusColor(status: string): string {
     return shipmentSection(status) === 'completed' ? '#2563eb' : '#059669';
   }
 
-  private clusterFor(section: 'active' | 'completed'): L.MarkerClusterGroup {
-    return section === 'active' ? this.activeCluster! : this.completedCluster!;
-  }
-
-  private routeLayerFor(section: 'active' | 'completed'): L.LayerGroup {
-    return section === 'active' ? this.activeRouteLayer! : this.completedRouteLayer!;
-  }
-
-  private destLayerFor(section: 'active' | 'completed'): L.LayerGroup {
-    return section === 'active' ? this.activeDestLayer! : this.completedDestLayer!;
-  }
-
-  private etaLabel(s: Shipment): string {
+  etaLabel(s: Shipment): string {
     if (s.status === 'SOLD' || s.status === 'ARRIVED') {
       return 'Arrived';
     }
@@ -350,6 +265,13 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     return `${(hours / 24).toFixed(1)} d`;
   }
 
+  trackingStage(s: Shipment): 'dispatched' | 'transit' | 'arrived' {
+    if (s.status === 'ARRIVED' || s.status === 'SOLD') {
+      return 'arrived';
+    }
+    return (s.progress ?? 0) > 0.01 ? 'transit' : 'dispatched';
+  }
+
   private popupHtml(s: Shipment): string {
     const pct = Math.round((s.progress ?? 0) * 100);
     return `
@@ -361,91 +283,6 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
         Status: ${s.status}
       </div>
     `;
-  }
-
-  private renderMarkers(): void {
-    if (!this.activeCluster || !this.completedCluster || !this.activeDestLayer || !this.completedDestLayer || !this.activeRouteLayer || !this.completedRouteLayer) {
-      return;
-    }
-    const list = this.shipments();
-    const seenIds = new Set<string | number>();
-
-    for (const s of list) {
-      if (s.currentLat == null || s.currentLon == null) {
-        continue;
-      }
-      seenIds.add(s.id);
-      const section = shipmentSection(s.status);
-      const newLatLng = L.latLng(s.currentLat, s.currentLon);
-      const existing = this.tracked.get(s.id);
-
-      if (!existing) {
-        const rot = s.destinationLat != null && s.destinationLon != null
-          ? bearing(newLatLng, L.latLng(s.destinationLat, s.destinationLon))
-          : 0;
-        const icon = L.divIcon({
-          className: '',
-          html: truckIconHtml(rot, section === 'active'),
-          iconSize: [30, 30],
-          iconAnchor: [15, 15],
-        });
-        const marker = L.marker(newLatLng, { icon }).bindPopup(this.popupHtml(s));
-        this.clusterFor(section).addLayer(marker);
-
-        const routeLine = L.layerGroup();
-        this.drawRoute(routeLine, s);
-        routeLine.addTo(this.routeLayerFor(section));
-
-        if (s.destinationLat != null && s.destinationLon != null) {
-          const destIcon = L.divIcon({
-            className: '',
-            html: '<div style="background:#f59e0b;width:12px;height:12px;border-radius:3px;border:2px solid #ffffff;box-shadow:0 0 0 1px rgba(0,0,0,0.15);"></div>',
-            iconSize: [12, 12],
-            iconAnchor: [6, 6],
-          });
-          const destMarker = L.marker([s.destinationLat, s.destinationLon], { icon: destIcon }).bindPopup(`Destination: ${s.destinationMarket}`);
-          destMarker.addTo(this.destLayerFor(section));
-          this.destMarkers.set(s.id, { marker: destMarker, section });
-        }
-
-        this.tracked.set(s.id, { marker, routeLine, currentLatLng: newLatLng, shipment: s, section });
-      } else {
-        if (existing.section !== section) {
-          this.clusterFor(existing.section).removeLayer(existing.marker);
-          this.clusterFor(section).addLayer(existing.marker);
-          this.routeLayerFor(existing.section).removeLayer(existing.routeLine);
-          existing.routeLine.addTo(this.routeLayerFor(section));
-          const destEntry = this.destMarkers.get(s.id);
-          if (destEntry) {
-            this.destLayerFor(destEntry.section).removeLayer(destEntry.marker);
-            destEntry.marker.addTo(this.destLayerFor(section));
-            destEntry.section = section;
-          }
-          existing.section = section;
-        }
-        existing.shipment = s;
-        existing.marker.setPopupContent(this.popupHtml(s));
-        existing.routeLine.clearLayers();
-        this.drawRoute(existing.routeLine, s);
-        this.animateMarker(existing, newLatLng, s);
-      }
-    }
-
-    for (const [id, t] of Array.from(this.tracked.entries())) {
-      if (!seenIds.has(id)) {
-        if (t.animFrame) {
-          cancelAnimationFrame(t.animFrame);
-        }
-        this.clusterFor(t.section).removeLayer(t.marker);
-        t.routeLine.remove();
-        this.tracked.delete(id);
-        const destEntry = this.destMarkers.get(id);
-        if (destEntry) {
-          this.destLayerFor(destEntry.section).removeLayer(destEntry.marker);
-          this.destMarkers.delete(id);
-        }
-      }
-    }
   }
 
   private drawRoute(group: L.LayerGroup, s: Shipment): void {
@@ -462,45 +299,137 @@ export class LogisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     L.polyline([mid, dest], { color, weight: 2, opacity: 0.5, dashArray: '6, 8' }).addTo(group);
   }
 
-  private animateMarker(t: TrackedShipment, target: L.LatLng, s: Shipment): void {
-    if (t.animFrame) {
-      cancelAnimationFrame(t.animFrame);
+  toggleShipmentExpand(s: Shipment): void {
+    const alreadyOpen = this.expandedShipmentId() === s.id;
+    this.collapseFocused();
+    if (alreadyOpen) {
+      return;
     }
-    const start = t.currentLatLng;
+    this.expandedShipmentId.set(s.id);
+    setTimeout(() => this.initFocusedMap(s), 0);
+  }
+
+  private collapseFocused(): void {
+    if (this.focused) {
+      if (this.focused.animFrame) {
+        cancelAnimationFrame(this.focused.animFrame);
+      }
+      this.focused.map.remove();
+      this.focused = undefined;
+    }
+    this.expandedShipmentId.set(null);
+  }
+
+  private initFocusedMap(s: Shipment): void {
+    const elId = `shipment-map-${s.id}`;
+    if (!document.getElementById(elId)) {
+      return;
+    }
+    const map = L.map(elId, { zoomControl: true, attributionControl: false, scrollWheelZoom: false });
+    addBaseLayers(map);
+
+    const routeLine = L.layerGroup().addTo(map);
+    this.drawRoute(routeLine, s);
+
+    const bounds: L.LatLngTuple[] = [];
+    if (s.originLat != null && s.originLon != null) {
+      bounds.push([s.originLat, s.originLon]);
+      const originIcon = L.divIcon({
+        className: '',
+        html: '<div style="background:#64748b;width:10px;height:10px;border-radius:50%;border:2px solid #ffffff;box-shadow:0 0 0 1px rgba(0,0,0,0.15);"></div>',
+        iconSize: [10, 10],
+        iconAnchor: [5, 5],
+      });
+      L.marker([s.originLat, s.originLon], { icon: originIcon }).bindPopup('Origin').addTo(map);
+    }
+    if (s.destinationLat != null && s.destinationLon != null) {
+      bounds.push([s.destinationLat, s.destinationLon]);
+      const destIcon = L.divIcon({
+        className: '',
+        html: '<div style="background:#f59e0b;width:12px;height:12px;border-radius:3px;border:2px solid #ffffff;box-shadow:0 0 0 1px rgba(0,0,0,0.15);"></div>',
+        iconSize: [12, 12],
+        iconAnchor: [6, 6],
+      });
+      L.marker([s.destinationLat, s.destinationLon], { icon: destIcon }).bindPopup(`Destination: ${s.destinationMarket}`).addTo(map);
+    }
+
+    const currentLatLng =
+      s.currentLat != null && s.currentLon != null
+        ? L.latLng(s.currentLat, s.currentLon)
+        : bounds.length > 0
+          ? L.latLng(bounds[0][0], bounds[0][1])
+          : L.latLng(20, 60);
+    const rot =
+      s.destinationLat != null && s.destinationLon != null ? bearing(currentLatLng, L.latLng(s.destinationLat, s.destinationLon)) : 0;
+    const marker = L.marker(currentLatLng, {
+      icon: L.divIcon({ className: '', html: truckIconHtml(rot, s.status === 'IN_TRANSIT'), iconSize: [30, 30], iconAnchor: [15, 15] }),
+    }).addTo(map);
+
+    if (bounds.length === 2) {
+      map.fitBounds(L.latLngBounds(bounds), { padding: [30, 30], maxZoom: 12 });
+    } else if (bounds.length === 1) {
+      map.setView(bounds[0], 6);
+    } else {
+      map.setView([20, 60], 4);
+    }
+
+    this.focused = { id: s.id, map, marker, routeLine, currentLatLng };
+  }
+
+  private updateFocusedMap(): void {
+    if (!this.focused) {
+      return;
+    }
+    const s = this.shipments().find((x) => x.id === this.focused!.id);
+    if (!s) {
+      this.collapseFocused();
+      return;
+    }
+    this.focused.routeLine.clearLayers();
+    this.drawRoute(this.focused.routeLine, s);
+    if (s.currentLat != null && s.currentLon != null) {
+      this.animateFocusedMarker(L.latLng(s.currentLat, s.currentLon), s);
+    }
+  }
+
+  private animateFocusedMarker(target: L.LatLng, s: Shipment): void {
+    const f = this.focused;
+    if (!f) {
+      return;
+    }
+    if (f.animFrame) {
+      cancelAnimationFrame(f.animFrame);
+    }
+    const start = f.currentLatLng;
     if (start.equals(target)) {
       return;
     }
     const startTime = performance.now();
     const rot = s.destinationLat != null && s.destinationLon != null ? bearing(start, target) : 0;
-    t.marker.setIcon(
-      L.divIcon({
-        className: '',
-        html: truckIconHtml(rot, t.section === 'active'),
-        iconSize: [30, 30],
-        iconAnchor: [15, 15],
-      }),
+    f.marker.setIcon(
+      L.divIcon({ className: '', html: truckIconHtml(rot, s.status === 'IN_TRANSIT'), iconSize: [30, 30], iconAnchor: [15, 15] }),
     );
-
     const step = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(1, elapsed / ANIMATION_MS);
       const pos = lerpLatLng(start, target, progress);
-      t.marker.setLatLng(pos);
+      f.marker.setLatLng(pos);
       if (progress < 1) {
-        t.animFrame = requestAnimationFrame(step);
+        f.animFrame = requestAnimationFrame(step);
       } else {
-        t.currentLatLng = target;
-        t.animFrame = undefined;
+        f.currentLatLng = target;
+        f.animFrame = undefined;
       }
     };
-    t.animFrame = requestAnimationFrame(step);
+    f.animFrame = requestAnimationFrame(step);
   }
 
   loadShipments(): void {
     this.api.getShipments().subscribe({
       next: (list) => {
         this.shipments.set(list ?? []);
-        this.renderMarkers();
+        this.renderOverviewMarkers();
+        this.updateFocusedMap();
       },
       error: () => this.shipments.set([]),
     });
