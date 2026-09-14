@@ -30,7 +30,7 @@ body {
   z-index: 0;
   background-image:
     linear-gradient(180deg, rgba(255, 255, 255, 0.93) 0%, rgba(247, 248, 250, 0.95) 55%, rgba(238, 241, 245, 0.95) 100%),
-    url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1920&q=80');
+    url('https://images.unsplash.com/photo-1721594489446-7fd9d30a3d71?auto=format&fit=crop&w=1920&q=80');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
@@ -97,6 +97,40 @@ body {
 
 .sidebar.no-transition {
   transition: none;
+}
+
+.sidebar.collapsed {
+  min-width: 0;
+}
+
+.sidebar:not(.no-transition) {
+  transition: width 0.25s ease;
+}
+
+.collapse-toggle {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  z-index: 6;
+}
+
+.sidebar.collapsed .collapse-toggle {
+  position: static;
+  margin: 0.5rem auto 0.75rem;
+}
+
+.collapse-toggle:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: scale(1.06);
 }
 
 .logo-badge {
@@ -199,9 +233,9 @@ body {
 
 /* Topbar */
 .topbar {
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid #e3e6ec;
+  background: linear-gradient(100deg, #047857 0%, #0d9488 45%, #0f766e 75%, #1e3a5f 100%);
+  box-shadow: 0 2px 16px rgba(4, 120, 87, 0.18);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .user-chip {
@@ -226,12 +260,12 @@ body {
 .logout-btn {
   padding: 0.5rem;
   border-radius: 0.5rem;
-  color: #475569;
+  color: rgba(255, 255, 255, 0.85);
   transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
 }
 
 .logout-btn:hover {
-  background: #fee2e2;
+  background: rgba(254, 226, 226, 0.9);
   color: #dc2626;
   transform: scale(1.05);
 }
@@ -253,7 +287,7 @@ body {
 .ticker-item {
   white-space: nowrap;
   font-size: 0.8rem;
-  color: #475569;
+  color: rgba(255, 255, 255, 0.92);
   font-weight: 500;
 }
 
@@ -279,6 +313,25 @@ body {
 .accent-text {
   color: #059669;
 }
+
+/* Dashboard panel accents */
+.panel-heading {
+  position: relative;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid transparent;
+  display: inline-block;
+}
+
+.panel-emerald .panel-heading { border-color: #10b981; }
+.panel-teal .panel-heading { border-color: #14b8a6; }
+.panel-blue .panel-heading { border-color: #3b82f6; }
+.panel-amber .panel-heading { border-color: #d97706; }
+.panel-violet .panel-heading { border-color: #8b5cf6; }
+.panel-rose .panel-heading { border-color: #e11d48; }
+
+.panel-amber .bg-amber-50 { border-color: #fbbf24; }
+
+.panel-blue #dashboard-mini-map { border: 1px solid rgba(59, 130, 246, 0.15); }
 
 .mat-mdc-form-field {
   width: 100%;

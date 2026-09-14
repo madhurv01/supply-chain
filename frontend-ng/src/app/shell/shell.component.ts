@@ -11,9 +11,11 @@ interface NavItem {
 }
 
 const WIDTH_KEY = 'agrichain.sidebar.width';
+const COLLAPSED_KEY = 'agrichain.sidebar.collapsed';
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 380;
 const DEFAULT_WIDTH = 256;
+const COLLAPSED_WIDTH = 68;
 
 @Component({
   selector: 'app-shell',
@@ -45,6 +47,11 @@ export class ShellComponent {
   readonly sidebarOpen = signal(false);
   readonly sidebarWidth = signal(this.readStoredWidth());
   readonly resizing = signal(false);
+  readonly collapsed = signal(this.readStoredCollapsed());
+
+  get effectiveWidth(): number {
+    return this.collapsed() ? COLLAPSED_WIDTH : this.sidebarWidth();
+  }
 
   constructor(private auth: AuthService, private router: Router, private hostEl: ElementRef<HTMLElement>) {}
 
@@ -59,6 +66,23 @@ export class ShellComponent {
 
   toggleSidebar(): void {
     this.sidebarOpen.update((v) => !v);
+  }
+
+  toggleCollapse(): void {
+    this.collapsed.update((v) => !v);
+    try {
+      localStorage.setItem(COLLAPSED_KEY, String(this.collapsed()));
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  private readStoredCollapsed(): boolean {
+    try {
+      return localStorage.getItem(COLLAPSED_KEY) === 'true';
+    } catch {
+      return false;
+    }
   }
 
   logout(): void {
@@ -84,6 +108,10 @@ export class ShellComponent {
     this.resizing.set(true);
     const startX = event.clientX;
     const startWidth = this.sidebarWidth();
+
+    if (this.collapsed()) {
+      return;
+    }
 
     const onMove = (moveEvent: PointerEvent) => {
       const delta = moveEvent.clientX - startX;

@@ -160,7 +160,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       datasets: [
         {
           data: items.map((i) => i.quantity),
-          backgroundColor: ['#4ade80', '#a3e635', '#10b981', '#34d399', '#65a30d', '#22c55e', '#86efac', '#059669', '#16a34a', '#bef264', '#15803d', '#84cc16', '#047857', '#a7f3d0'],
+          backgroundColor: ['#8b5cf6', '#a78bfa', '#7c3aed', '#c4b5fd', '#6d28d9', '#ddd6fe', '#5b21b6', '#a855f7', '#9333ea', '#e9d5ff', '#4c1d95', '#c084fc', '#7e22ce', '#f3e8ff'],
         },
       ],
     });
@@ -289,7 +289,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.markersLayer.clearLayers();
     const truckIcon = L.divIcon({
       className: '',
-      html: '<div style="background:#059669;width:10px;height:10px;border-radius:50%;border:2px solid #ffffff;"></div>',
+      html: '<div style="background:#3b82f6;width:10px;height:10px;border-radius:50%;border:2px solid #ffffff;"></div>',
       iconSize: [10, 10],
     });
     for (const s of this.pendingShipments) {

@@ -29,8 +29,8 @@
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
     <!-- Panel 1: Revenue trend -->
-    <div class="card p-4 h-80 flex flex-col">
-      <p class="text-sm font-medium text-slate-700 mb-2">📈 Revenue Trend</p>
+    <div class="card p-4 h-80 flex flex-col panel-emerald">
+      <p class="text-sm font-medium text-slate-700 mb-2 panel-heading">📈 Revenue Trend</p>
       @if (loadingRevenue()) {
         <div class="flex-1 flex items-center justify-center text-sm text-slate-400">Loading…</div>
       } @else if (errorRevenue()) {
@@ -43,9 +43,9 @@
     </div>
 
     <!-- Panel 2: Inventory composition -->
-    <div class="card p-4 h-80 flex flex-col">
+    <div class="card p-4 h-80 flex flex-col panel-violet">
       <div class="flex items-center justify-between mb-2">
-        <p class="text-sm font-medium text-slate-700">🧺 Inventory Composition</p>
+        <p class="text-sm font-medium text-slate-700 panel-heading">🧺 Inventory Composition</p>
         @if (!loadingMovers() && inventoryValue() > 0) {
           <span class="text-xs text-slate-500">Est. value: <span class="font-semibold accent-text">{{ inventoryValue() | currency:'INR':'symbol':'1.0-0' }}</span></span>
         }
@@ -64,8 +64,8 @@
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
     <!-- Panel 3: Live shipment map -->
-    <div class="card p-4 h-80 flex flex-col">
-      <p class="text-sm font-medium text-slate-700 mb-2">🚚 Live Shipment Map</p>
+    <div class="card p-4 h-80 flex flex-col panel-blue">
+      <p class="text-sm font-medium text-slate-700 mb-2 panel-heading">🚚 Live Shipment Map</p>
       @if (errorMap()) {
         <div class="flex-1 flex items-center justify-center text-sm text-amber-700">{{ errorMap() }}</div>
       } @else {
@@ -79,8 +79,8 @@
     </div>
 
     <!-- Panel 4: Harvest readiness -->
-    <div class="card p-4 h-80 flex flex-col">
-      <p class="text-sm font-medium text-slate-700 mb-2">🌾 Harvest Readiness</p>
+    <div class="card p-4 h-80 flex flex-col panel-amber">
+      <p class="text-sm font-medium text-slate-700 mb-2 panel-heading">🌾 Harvest Readiness</p>
       @if (loadingHarvest()) {
         <div class="flex-1 flex items-center justify-center text-sm text-slate-400">Loading…</div>
       } @else if (errorHarvest()) {
@@ -113,8 +113,8 @@
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
     <!-- Panel 5: Market volatility / top movers -->
-    <div class="card p-4 h-80 flex flex-col">
-      <p class="text-sm font-medium text-slate-700 mb-2">📊 Price Volatility — Top Movers</p>
+    <div class="card p-4 h-80 flex flex-col panel-rose">
+      <p class="text-sm font-medium text-slate-700 mb-2 panel-heading">📊 Price Volatility — Top Movers</p>
       @if (loadingMovers()) {
         <div class="flex-1 flex items-center justify-center text-sm text-slate-400">Loading…</div>
       } @else if (errorMovers()) {
@@ -152,8 +152,8 @@
     </div>
 
     <!-- Panel 6: Route optimizer quick insight -->
-    <div class="card p-4 h-80 flex flex-col">
-      <p class="text-sm font-medium text-slate-700 mb-2">🧭 Best Shipping Opportunity</p>
+    <div class="card p-4 h-80 flex flex-col panel-teal">
+      <p class="text-sm font-medium text-slate-700 mb-2 panel-heading">🧭 Best Shipping Opportunity</p>
       @if (loadingOptimizer()) {
         <div class="flex-1 flex items-center justify-center text-sm text-slate-400">Loading…</div>
       } @else if (errorOptimizer()) {
