@@ -183,9 +183,23 @@ Auto-seeded into `AspNetUsers` on backend startup — no email confirmation step
 - **EF Core migration fails with a DNS error on `db.<ref>.supabase.co`** — that host is IPv6-only; use the pooler host (`aws-0-<region>.pooler.supabase.com`) instead, with username `postgres.<project-ref>`.
 - **`28P01: password authentication failed`** — the password in `appsettings.Development.json` doesn't match Supabase's current database password. Reset it from the dashboard (Project Settings → Database → **Reset database password** — use the button, don't type a custom value from memory) and copy the generated value exactly.
 - **Agent/grading replies "not configured" or with a provider error** — set `Groq:ApiKey` in `appsettings.Development.json`. If Groq returns `model_permission_blocked_org`, the models this app uses are blocked in your Groq organization's settings — enable them at console.groq.com/settings/limits, or swap the model constants in `src/AgriChain.Agent/GroqClient.cs` for ones your org has access to.
+- **`dotnet build` fails with `MSB3027`/`MSB3021: ... being used by another process`** — a previous `dotnet run` is still holding the output DLLs. Stop that backend process, then rebuild.
+- **Agent chat throws `Groq API error 429` mid-conversation** — a free-tier rate limit (input/output tokens per minute), not a bug; wait a few seconds and retry. Multi-tool-call conversations use more tokens per turn.
 
 ## Known limitations
 
 - Logistics is simulated — destination coordinates are deterministically hashed from the market name (no real geocoding), and shipment progress is computed from real elapsed time vs. an estimated transit duration (distance ÷ assumed truck speed), not an actual GPS feed.
 - UPI QR codes are a `upi://pay?...` deep link only — no real payment gateway.
 - The routing optimizer's spoilage-risk table is a static commodity-keyword lookup, not a live perishability model.
+- The Groq free tier enforces fairly low per-minute token limits; heavy back-to-back agent/grading use can hit `429` rate limits.
+
+## Roadmap
+
+- Real geocoding for shipment destinations instead of the deterministic hash.
+- A live perishability model (or a small ML lookup) instead of the static spoilage-rate table.
+- Real UPI/payment gateway integration in place of the deep-link-only QR flow.
+- Push notifications (e.g. via the MCP server or a webhook) when a shipment arrives.
+
+## Data & license
+
+`agriculture.csv` is a public Indian commodity mandi price dataset (state/market/commodity/min-max-modal price), used here for seeding demo data only. This project itself has no license file yet — treat it as all-rights-reserved by default unless the repo owner adds one.
